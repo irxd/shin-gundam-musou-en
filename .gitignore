@@ -9,6 +9,7 @@
 !/LICENSE
 !/docs/**
 !/tools/*.py
+!/tools/re/*.py
 !/scripts/*.ps1
 !/scripts/*.sh
 !/scripts/*.py
