@@ -1,0 +1,31 @@
+# Allow-list: ignore everything, then re-include only our own source files.
+# Game data (ISOs, Vita dumps, decrypted files, built LINKDATA archives) must never be committed.
+*
+!*/
+
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/LICENSE
+!/docs/**
+!/tools/*.py
+!/scripts/*.ps1
+!/scripts/*.sh
+!/scripts/*.py
+
+# Never track these, even inside allowed folders
+__pycache__/
+*.pyc
+*.iso
+*.bin
+*.BIN
+*.zip
+*.rar
+*.7z
+*.key
+*.dkey
+*.pkg
+*.vpk
+# (Windows git is case-insensitive, so keep this narrow enough not to hit tools/linkdata.py)
+LINKDATA.[A-Za-z]
+LINKDATA_*/
