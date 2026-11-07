@@ -70,6 +70,11 @@ is decrypted.
 3. **Apply the patches** on your PC: each `.xdelta` file plus its source file gives a patched file (see the
    table above). For the eboot use `eboot_v1.00.xdelta` **or** `eboot_v1.02.xdelta` to match the eboot you
    decrypted, and name the result `eboot.bin`.
+
+   > **Note:** *Delta Patcher* overwrites the file you select unless *Backup original file* is ticked; *xdelta
+   > UI* and the `xdelta3` command line write a new file. Keep an unpatched copy of each file (or tick the
+   > backup option) in case you need it again, for example for a future patch version. You can check every
+   > result against the patched SHA-1 in `checksums.txt`.
 4. **Copy the patched files** to the Vita:
    ```
    ux0:rePatch/PCSG00278/eboot.bin
