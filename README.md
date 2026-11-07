@@ -37,14 +37,8 @@ Download the latest `shin-gundam-musou-vita-english-<version>.zip` from the
 [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page and unzip it.
 
 First check which version you have: **1.00** (no update) or **1.02** (the update is installed, so
-`ux0:patch/PCSG00278/` exists). The version decides **where the `eboot.bin` comes from** and **which eboot
-patch** to use. Everything else is the same.
-
-| File | Version 1.00 (no update) | Version 1.02 (update installed) | Result goes to |
-|---|---|---|---|
-| `eboot.bin` (decrypt with FAGDec to `eboot.bin.elf`) | from `ux0:app/PCSG00278/` + `patches/eboot_v1.00.xdelta` | from `ux0:patch/PCSG00278/` + `patches/eboot_v1.02.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
-| `LINKDATA_NGP/LINKDATA.B` (decrypted) | from `ux0:app/PCSG00278/` + `patches/LINKDATA.B.xdelta` | same as 1.00 (the update doesn't include it) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
-| `LINKDATA_NGP/LINKDATA.C` (decrypted) | from `ux0:app/PCSG00278/` + `patches/LINKDATA.C.xdelta` | same as 1.00 (the update doesn't include it) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
+`ux0:patch/PCSG00278/` exists). The version decides where the `eboot.bin` comes from and which eboot patch to
+use. Everything else is the same.
 
 `checksums.txt` in the zip lists the SHA-1 of each expected source file and of each patched result. If a source
 file doesn't match, the patch will fail: check that you used the patch for your game version and that the file
@@ -67,9 +61,16 @@ is decrypted.
 2. **Copy the decrypted data files** (both versions): in VitaShell, go to `ux0:app/PCSG00278/`, open the
    folder with *Open decrypted* (△ menu), and copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to
    your PC. `LINKDATA.C` is about 1 GB.
-3. **Apply the patches** on your PC: each `.xdelta` file plus its source file gives a patched file (see the
-   table above). For the eboot use `eboot_v1.00.xdelta` **or** `eboot_v1.02.xdelta` to match the eboot you
-   decrypted, and name the result `eboot.bin`.
+3. **Apply the patches** on your PC: each `.xdelta` file plus its source file gives a patched file. For the
+   eboot use `eboot_v1.00.xdelta` **or** `eboot_v1.02.xdelta` to match the eboot you decrypted, and name the
+   result `eboot.bin`.
+
+   | Source file (from step 1 or 2) | Patch | Result goes to |
+   |---|---|---|
+   | `eboot.bin.elf`, version 1.00 | `patches/eboot_v1.00.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
+   | `eboot.bin.elf`, version 1.02 | `patches/eboot_v1.02.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
+   | `LINKDATA.B` | `patches/LINKDATA.B.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
+   | `LINKDATA.C` | `patches/LINKDATA.C.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
 
    > **Note:** *Delta Patcher* overwrites the file you select unless *Backup original file* is ticked; *xdelta
    > UI* and the `xdelta3` command line write a new file. Keep an unpatched copy of each file (or tick the
