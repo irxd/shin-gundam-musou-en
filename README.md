@@ -7,7 +7,10 @@ The game was released in the West only on PS3, as *Dynasty Warriors: Gundam Rebo
 engine and use the same data layout.
 
 > **Status: playable in English (v0.2.0, early test release; game versions 1.00 and 1.02).** Tested on a real
-> PS Vita and in Vita3K. Download the patch from the [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page.
+> PS Vita and in Vita3K.
+>
+> **Patch it in your browser with the [web patcher](https://irxd.github.io/shin-musou-gundam-vita-english/)** (new, experimental), or download the patch files
+> from the [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page and use Delta Patcher. See [Installation](#installation).
 
 <p align="center"><img src="docs/screenshots/05-story-dialogue.png" width="420" alt="Story scene with English dialogue, on a PS Vita"> <img src="docs/screenshots/08-battle-dialogue.png" width="420" alt="Battle with English dialogue and mission, on a PS Vita"></p>
 
@@ -18,11 +21,11 @@ More screenshots: [Screenshots](#screenshots).
 The patch is a set of small **xdelta** files that you apply to files from **your own copy** of the game. No game
 data is included.
 
-> **New: [web patcher](https://irxd.github.io/shin-musou-gundam-vita-english/) (experimental).** Instead of
-> Delta Patcher, you can apply the patch in your browser: choose your decrypted `eboot.bin.elf`, `LINKDATA.B` and
-> `LINKDATA.C`, and it gives you the finished `rePatch` folder. Everything runs on your computer and nothing is
-> uploaded. You still need to get those three files from your Vita (steps 1 and 2 below). Desktop Chrome or Edge
-> is recommended. If it doesn't work for you, use the manual steps below.
+**Quickest way (real Vita):**
+1. Get your decrypted `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C` from the Vita (steps 1 and 2 below).
+2. Open the **[web patcher](https://irxd.github.io/shin-musou-gundam-vita-english/)** (experimental), choose the
+   three files and press **Patch**.
+3. Copy the `rePatch` folder it gives you to `ux0:` on the Vita, and start the game.
 
 ### You need
 
@@ -34,23 +37,15 @@ data is included.
   - **FAGDec**, to decrypt the game's `eboot.bin`.
   - **VitaShell**, to copy files between the Vita and your PC.
 - **For [Vita3K](https://vita3k.org/):** the game installed in Vita3K. Its files are already decrypted.
-- **[Delta Patcher](https://github.com/marco-calautti/DeltaPatcher/releases)** (recommended), to apply the
-  patches on your PC. It's the tool the patch was tested with; other xdelta3 tools should also work.
-
-### The patch files
-
-Download the latest `shin-gundam-musou-vita-english-<version>.zip` from the
-[Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page and unzip it.
-
-First check which version you have: **1.00** (no update) or **1.02** (the update is installed, so
-`ux0:patch/PCSG00278/` exists). The version decides where the `eboot.bin` comes from and which eboot patch to
-use. Everything else is the same.
-
-`checksums.txt` in the zip lists the SHA-1 of each expected source file and of each patched result. If a source
-file doesn't match, the patch will fail: check that you used the patch for your game version and that the file
-is decrypted.
+- **To apply the patch**, one of:
+  - the **[web patcher](https://irxd.github.io/shin-musou-gundam-vita-english/)** in desktop Chrome or Edge (easiest, experimental), or
+  - **[Delta Patcher](https://github.com/marco-calautti/DeltaPatcher/releases)** with the patch files from
+    [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases). Other xdelta3 tools should also work, but Delta Patcher is the one that was tested.
 
 ### Real PS Vita (rePatch)
+
+First check which version you have: **1.00** (no update) or **1.02** (the update is installed, so
+`ux0:patch/PCSG00278/` exists). The version only decides where the `eboot.bin` comes from (step 1).
 
 1. **Decrypt the eboot with FAGDec:**
    1. Open FAGDec.
@@ -67,22 +62,33 @@ is decrypted.
 2. **Copy the decrypted data files** (both versions): in VitaShell, go to `ux0:app/PCSG00278/`, open the
    folder with *Open decrypted* (△ menu), and copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to
    your PC. `LINKDATA.C` is about 1 GB.
-3. **Apply the patches** on your PC: each `.xdelta` file plus its source file gives a patched file. For the
-   eboot use `eboot_v1.00.xdelta` **or** `eboot_v1.02.xdelta` to match the eboot you decrypted, and name the
-   result `eboot.bin`.
+3. **Apply the patch** on your PC. Choose one:
 
-   | Source file (from step 1 or 2) | Patch | Result goes to |
-   |---|---|---|
-   | `eboot.bin.elf`, version 1.00 | `patches/eboot_v1.00.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
-   | `eboot.bin.elf`, version 1.02 | `patches/eboot_v1.02.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
-   | `LINKDATA.B` | `patches/LINKDATA.B.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
-   | `LINKDATA.C` | `patches/LINKDATA.C.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
+   **Option A: web patcher** (easiest, experimental)
+   1. Open the **[web patcher](https://irxd.github.io/shin-musou-gundam-vita-english/)** in desktop Chrome or Edge.
+   2. Choose (or drop) your `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C`. It detects your game version and
+      checks every file.
+   3. Press **Patch**. You get the finished `rePatch` folder, saved into a folder you pick or as a zip.
 
-   > **Note:** *Delta Patcher* overwrites the file you select unless *Backup original file* is ticked; *xdelta
-   > UI* and the `xdelta3` command line write a new file. Keep an unpatched copy of each file (or tick the
-   > backup option) in case you need it again, for example for a future patch version. You can check every
-   > result against the patched SHA-1 in `checksums.txt`.
-4. **Copy the patched files** to the Vita:
+   Everything runs in your browser; nothing is uploaded. If it doesn't work for you, use option B.
+
+   **Option B: Delta Patcher** (manual)
+   1. Download the latest `shin-gundam-musou-vita-english-<version>.zip` from [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) and unzip it.
+   2. Apply each `.xdelta` file to its source file. For the eboot use `eboot_v1.00.xdelta` **or**
+      `eboot_v1.02.xdelta` to match the eboot you decrypted, and name the result `eboot.bin`.
+
+      | Source file (from step 1 or 2) | Patch | Result goes to |
+      |---|---|---|
+      | `eboot.bin.elf`, version 1.00 | `patches/eboot_v1.00.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
+      | `eboot.bin.elf`, version 1.02 | `patches/eboot_v1.02.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
+      | `LINKDATA.B` | `patches/LINKDATA.B.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
+      | `LINKDATA.C` | `patches/LINKDATA.C.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
+
+   > **Note:** *Delta Patcher* overwrites the file you select unless *Backup original file* is ticked. Keep an
+   > unpatched copy of each file (or tick the backup option) in case you need it again, for example for a future
+   > patch version. `checksums.txt` in the zip lists the SHA-1 of each expected source file and patched result;
+   > if a source file doesn't match, the patch fails: check the game version and that the file is decrypted.
+4. **Copy the patched files** to the Vita (with the web patcher: copy its `rePatch` folder to `ux0:`):
    ```
    ux0:rePatch/PCSG00278/eboot.bin
    ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B
@@ -95,11 +101,11 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 
 1. Find the installed game at `<Vita3K data>/ux0/app/PCSG00278/`. Back up `eboot.bin` and
    `LINKDATA_NGP/LINKDATA.B` and `LINKDATA.C`.
-2. Apply the LINKDATA patches to the files from that folder.
-3. Apply the eboot patch for your version to a decrypted `eboot.bin.elf`. You can get one from FAGDec on a
+2. Get a decrypted `eboot.bin.elf`. You can get one from FAGDec on a
    Vita, or from Vita3K's *ELF dumping* option (Settings → Debug), which writes
-   `elfdumps/PCSG00278/0x81000000-0x8137BCCC_app0.elf`. Rename it to `eboot.bin.elf` and check its SHA-1
-   against `checksums.txt`.
+   `elfdumps/PCSG00278/0x81000000-0x8137BCCC_app0.elf`. Rename it to `eboot.bin.elf`.
+3. Apply the patch to the eboot and the two LINKDATA files, with the [web patcher](https://irxd.github.io/shin-musou-gundam-vita-english/) or Delta Patcher
+   (option A or B above).
 4. Put the patched LINKDATA files into `ux0/app/PCSG00278/LINKDATA_NGP/`, replacing the originals. Put the
    patched `eboot.bin` into `ux0/app/PCSG00278/` (1.00), or into `ux0/patch/PCSG00278/` if the 1.02 update
    is installed in Vita3K.
