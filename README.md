@@ -21,7 +21,7 @@ More screenshots: [Screenshots](#screenshots).
 The patch is a set of small **xdelta** files that you apply to files from **your own copy** of the game. No game
 data is included.
 
-**Quickest way (real Vita):**
+### Quickest way (real Vita):
 1. Get your decrypted `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C` from the Vita (steps 1 and 2 below).
 2. Open the **[web patcher](https://irxd.github.io/shin-musou-gundam-vita-english/)** (experimental), choose the
    three files and press **Patch**.
