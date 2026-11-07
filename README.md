@@ -9,7 +9,7 @@ engine and use the same data layout.
 > **Status: playable in English (v0.2.0, early test release; game versions 1.00 and 1.02).** Tested on a real
 > PS Vita and in Vita3K. Download the patch from the [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page.
 
-<p align="center"><img src="docs/screenshots/05-story-dialogue.png" width="640" alt="Story scene with English dialogue, on a PS Vita"></p>
+<p align="center"><img src="docs/screenshots/05-story-dialogue.png" width="420" alt="Story scene with English dialogue, on a PS Vita"> <img src="docs/screenshots/08-battle-dialogue.png" width="420" alt="Battle with English dialogue and mission, on a PS Vita"></p>
 
 More screenshots: [Screenshots](#screenshots).
 
