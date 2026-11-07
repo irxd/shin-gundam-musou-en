@@ -14,16 +14,27 @@ from textwrap_vita import Metrics, fixup, box_of
 METRICS = None    # set in main(); None disables wrapping
 
 
-def english(tp, tv, st, box=None):
+TABLE_SENTENCE = 12.0    # table records at least this wide (in Japanese) are sentences -> may be wrapped
+
+
+def english(tp, tv, st, box=None, table=False):
     """Final English bytes for one string: font fixups + pre-wrap for boxes that need it.
-    tp: PS3 English bytes, tv: Vita Japanese bytes it replaces, box: (width limit, max lines) or None."""
+    tp: PS3 English bytes, tv: Vita Japanese bytes it replaces, box: (width limit, max lines) or None.
+    table: record of a table entry (menus + help texts). Only sentences are wrapped there (short
+    labels must stay on one line), and never narrower than the Japanese line it replaces."""
     try:
         s = fixup(tp.decode('utf-8'))
     except UnicodeDecodeError:      # binary data that happens to look like a string table
         return tp
+    if table:
+        s = LABEL_OVERRIDES.get(s, s)
     if METRICS and box:
         ja = tv.decode('utf-8', 'replace')
         lim, lines = box
+        if table:
+            if '\n' not in ja and METRICS.width(ja, 5.0) < TABLE_SENTENCE:
+                return s.encode('utf-8')
+            lim = max(lim, METRICS.line_width(ja, 5.0))
         if '\n' in ja or METRICS.width(ja, 5.0) <= lim:      # shown in that box (not a one-line view)
             w, sc = METRICS.fit(s, lim, lines)
             if w != s:
@@ -128,6 +139,12 @@ def build_table(tid, recs, e='<'):
     return out
 
 
+# Short labels (whole table records) that are too wide for their Vita slot: exact PS3 text -> replacement.
+LABEL_OVERRIDES = {
+    'Regular Network Connection': 'Network Connection',     # Options label; auto-shrunk to unreadable
+}
+
+
 def port_table(dv, dp, st):
     tv, tp = parse_table(dv, '<'), parse_table(dp, '>')
     if not tv or not tp:
@@ -136,9 +153,10 @@ def port_table(dv, dp, st):
         st['table: id/count mismatch (skipped)'] += 1
         return None
     recs, n = [], 0
+    box = box_of(METRICS, [r.decode('utf-8', 'replace') for r in tv[1]]) if METRICS else None
     for rv, rp in zip(tv[1], tp[1]):
         if rp.strip(b'\0') and rp != rv:   # PS3 has real text here
-            recs.append(fixup(rp.decode('utf-8')).encode('utf-8')); n += 1
+            recs.append(english(rp, rv, st, box, table=True)); n += 1
         else:                              # PS3 placeholder/empty: keep Vita original
             recs.append(rv)
             if rv.strip(b'\0') and not rp.strip(b'\0'):

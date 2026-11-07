@@ -7,11 +7,11 @@ A box's width is estimated from the hand-placed line breaks of the Japanese text
 import json, re
 
 TAG = re.compile(r'(\[[a-z/]\]|\[\d+:[A-Za-z_0-9]+\])')
-PLACEHOLDER_JA, PLACEHOLDER_EN = 5.0, 8.0     # estimated width of a [n:NAME] substitution
+PLACEHOLDER_JA, PLACEHOLDER_EN = 5.0, 11.0    # estimated width of a [n:NAME] substitution (long names, e.g. 'Defense Commander')
 MIN_BOX = 14.0                                 # narrowest wrapping box seen (mission objective panel)
 SCALE_BASE, SCALE_MIN, SCALE_FULL = 0x60, 16, 32  # must match build_font.py (marker ESC + chr(0x60 + s))
 # characters the Vita font lacks -> closest glyph it has
-FIXUPS = {'Ü': 'U', 'ü': 'u', 'ä': 'a', 'ö': 'o', 'é': 'e', '—': '―', '\xa0': ' '}
+FIXUPS = {'Ü': 'U', 'ü': 'u', 'ä': 'a', 'ö': 'o', 'é': 'e', '—': '―', '\xa0': ' ', '℠': ''}
 
 
 class Metrics:

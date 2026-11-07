@@ -24,6 +24,10 @@ of the game.
 | `patches/eboot.bin.xdelta` | `eboot.bin.elf` (decrypted with FAGDec) | `ux0:rePatch/PCSG00278/eboot.bin` |
 | `patches/LINKDATA.B.xdelta` | `LINKDATA_NGP/LINKDATA.B` (decrypted) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
 | `patches/LINKDATA.C.xdelta` | `LINKDATA_NGP/LINKDATA.C` (decrypted) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
+| `patches/param.sfo.xdelta` (optional) | `sce_sys/param.sfo` | `ux0:app/PCSG00278/sce_sys/param.sfo` |
+
+The optional `param.sfo` patch changes the game's name in the home screen from 真・ガンダム無双 to
+*Shin Gundam Musou*. It is the only file that goes into `ux0:app` rather than `ux0:rePatch`.
 
 `checksums.txt` lists the SHA-1 of each expected source file and of each patched result. If a source file
 doesn't match, the patch will fail: check that you have version 1.00 and that the file is decrypted.
@@ -44,8 +48,12 @@ doesn't match, the patch will fail: check that you have version 1.00 and that th
    ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C
    ```
 5. Reboot the Vita and start the game.
+6. *Optional: English name on the home screen.* Copy `ux0:app/PCSG00278/sce_sys/param.sfo` to your PC, keep a
+   backup, and apply `param.sfo.xdelta`. Copy the result back over the original. Then, in VitaShell, press
+   △ and choose *Refresh LiveArea*.
 
-Nothing in `ux0:app` is changed. To uninstall, delete `ux0:rePatch/PCSG00278/`.
+Without step 6, nothing in `ux0:app` is changed. To uninstall, delete `ux0:rePatch/PCSG00278/`. If you did
+step 6, also put your backup `param.sfo` back and refresh the LiveArea again.
 
 ## Vita3K
 
@@ -57,6 +65,8 @@ Nothing in `ux0:app` is changed. To uninstall, delete `ux0:rePatch/PCSG00278/`.
    `elfdumps/PCSG00278/0x81000000-0x8137BCCC_app0.elf`. Rename it to `eboot.bin.elf` and check its SHA-1
    against `checksums.txt`.
 4. Put the three patched files into `ux0/app/PCSG00278/`, replacing the originals.
+5. *Optional:* apply `param.sfo.xdelta` to `ux0/app/PCSG00278/sce_sys/param.sfo` for the English name in the
+   game list. You may need to restart Vita3K or refresh the game list.
 
 ## Known issues
 
