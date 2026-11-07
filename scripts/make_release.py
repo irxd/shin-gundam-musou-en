@@ -51,6 +51,18 @@ def find_xdelta():
     sys.exit('xdelta3 not found: put xdelta3.exe in tools/bin/ or on PATH')
 
 
+def install_text(version):
+    """INSTALL.md for the zip: the README's installation section (between the install markers)."""
+    readme = (ROOT / 'README.md').read_text(encoding='utf-8')
+    start = readme.index('<!-- install:start')
+    body = readme[readme.index('-->', start) + 3:readme.index('<!-- install:end -->')].strip()
+    return (f'# Shin Gundam Musou (PS Vita) – English Patch v{version}\n\n'
+            'English translation of Shin Gundam Musou (PCSG00278), using the official English script and graphics '
+            'from Dynasty Warriors: Gundam Reborn (PS3, Europe).\n'
+            'Project page: https://github.com/irxd/shin-musou-gundam-vita-english\n\n'
+            + body + '\n')
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__)
@@ -72,7 +84,7 @@ def main():
         (FAGDEC / 'eboot.bin.elf', BUILD / 'eboot.bin', 'eboot.bin.xdelta', 'eboot.bin'),
         (VITA / 'LINKDATA.B', BUILD / 'LINKDATA_NGP/LINKDATA.B', 'LINKDATA.B.xdelta', 'LINKDATA_NGP/LINKDATA.B'),
         (VITA / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C', 'LINKDATA.C.xdelta', 'LINKDATA_NGP/LINKDATA.C'),
-        (SFO, SFO_OUT, 'param.sfo.xdelta', 'sce_sys/param.sfo (optional, see INSTALL.md)'),
+        (SFO, SFO_OUT, 'param.sfo.xdelta', 'sce_sys/param.sfo (optional)'),
     ]
     lines = []
     for src, dst, name, dest in pairs:
@@ -85,7 +97,7 @@ def main():
         target = dest if dest.startswith('sce_sys') else f'rePatch/PCSG00278/{dest}'
         lines.append(f'{name:20} {src.name:14} sha1 {sha1(src)}  ->  {target}  sha1 {sha1(dst)}')
     (out / 'checksums.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    shutil.copy(ROOT / 'docs/INSTALL.md', out / 'INSTALL.md')
+    (out / 'INSTALL.md').write_text(install_text(version), encoding='utf-8')
 
     zpath = out.parent / (out.name + '.zip')
     with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as z:

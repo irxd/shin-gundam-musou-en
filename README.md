@@ -7,38 +7,87 @@ The game was released in the West only on PS3, as *Dynasty Warriors: Gundam Rebo
 engine and use the same data layout.
 
 > **Status: playable in English (v0.1.0, early test release).** Tested in Vita3K; real-hardware testing in
-> progress. Download the patch from the [Releases](../../releases) page.
+> progress. Download the patch from the [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page.
 
+<!-- install:start  (this section is copied into INSTALL.md in the release zip by scripts/make_release.py) -->
 ## Installation
 
 The patch is a set of small **xdelta** files that you apply to files from **your own copy** of the game. No game
-data is included. The full step-by-step guide is in [docs/INSTALL.md](docs/INSTALL.md).
+data is included.
 
-**You need**
+### You need
 
-- Shin Gundam Musou, Japanese release **PCSG00278, version 1.00**
-- A PS Vita on HENkaku/Ensō with the **rePatch** plugin, **FAGDec** and **VitaShell**, or the game installed in
-  [Vita3K](https://vita3k.org/)
-- An xdelta tool on your PC, such as *xdelta UI* or *Delta Patcher*
+- **The game:** Shin Gundam Musou, Japanese release **PCSG00278, version 1.00**.
+- **For a real Vita:**
+  - A PS Vita on HENkaku/Ensō.
+  - The **rePatch** plugin, installed under `*KERNEL` in `ux0:tai/config.txt` (or `ur0:tai/config.txt`).
+  - **FAGDec**, to decrypt the game's `eboot.bin`.
+  - **VitaShell**, to copy files between the Vita and your PC.
+- **For [Vita3K](https://vita3k.org/):** the game installed in Vita3K. Its files are already decrypted.
+- **xdelta**, to apply the patches on your PC. Any xdelta3 tool works, such as *xdelta UI* or *Delta Patcher*.
 
-**Steps (real Vita)**
+### The patch files
 
-1. Download the latest `shin-gundam-musou-vita-english-<version>.zip` from [Releases](../../releases) and unzip it.
-2. Decrypt the game's `eboot.bin` with **FAGDec** (to `eboot.bin.elf`). Copy the decrypted
-   `LINKDATA_NGP/LINKDATA.B` and `LINKDATA.C` with VitaShell (*Open decrypted*).
-3. Apply the patches on your PC:
+Download the latest `shin-gundam-musou-vita-english-<version>.zip` from the
+[Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page and unzip it.
 
-   | Patch | Apply to | Copy the result to |
-   |---|---|---|
-   | `eboot.bin.xdelta` | `eboot.bin.elf` | `ux0:rePatch/PCSG00278/eboot.bin` |
-   | `LINKDATA.B.xdelta` | `LINKDATA.B` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
-   | `LINKDATA.C.xdelta` | `LINKDATA.C` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
-   | `param.sfo.xdelta` *(optional, English name on the home screen)* | `sce_sys/param.sfo` | `ux0:app/PCSG00278/sce_sys/param.sfo` |
+| Patch | Apply it to | Result goes to |
+|---|---|---|
+| `patches/eboot.bin.xdelta` | `eboot.bin.elf` (decrypted with FAGDec) | `ux0:rePatch/PCSG00278/eboot.bin` |
+| `patches/LINKDATA.B.xdelta` | `LINKDATA_NGP/LINKDATA.B` (decrypted) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
+| `patches/LINKDATA.C.xdelta` | `LINKDATA_NGP/LINKDATA.C` (decrypted) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
+| `patches/param.sfo.xdelta` (optional) | `sce_sys/param.sfo` | `ux0:app/PCSG00278/sce_sys/param.sfo` |
 
-4. Reboot the Vita and start the game. To uninstall, delete `ux0:rePatch/PCSG00278/`.
+The optional `param.sfo` patch changes the game's name on the home screen from 真・ガンダム無双 to
+*Shin Gundam Musou*. It is the only file that goes into `ux0:app` rather than `ux0:rePatch`.
 
-`checksums.txt` in the zip lists the expected SHA-1 of every file. If a patch fails, check that your game is
-v1.00 and that the source file is decrypted. For **Vita3K**, see [docs/INSTALL.md](docs/INSTALL.md#vita3k).
+`checksums.txt` in the zip lists the SHA-1 of each expected source file and of each patched result. If a source
+file doesn't match, the patch will fail: check that you have version 1.00 and that the file is decrypted.
+
+### Real PS Vita (rePatch)
+
+1. **Decrypt the eboot.** In FAGDec, select Shin Gundam Musou (PCSG00278), choose `eboot.bin` and decrypt it
+   to ELF. Copy the resulting `eboot.bin.elf` to your PC.
+2. **Copy the decrypted data files.** In VitaShell, go to `ux0:app/PCSG00278/`, open the folder with
+   *Open decrypted* (△ menu), and copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to your PC.
+   `LINKDATA.C` is about 1 GB.
+3. **Apply the patches** on your PC: each `.xdelta` file plus its source file gives a patched file (see the
+   table above). Name the patched eboot `eboot.bin`.
+4. **Copy the patched files** to the Vita:
+   ```
+   ux0:rePatch/PCSG00278/eboot.bin
+   ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B
+   ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C
+   ```
+5. Reboot the Vita and start the game.
+6. *Optional: English name on the home screen.* Copy `ux0:app/PCSG00278/sce_sys/param.sfo` to your PC, keep a
+   backup, and apply `param.sfo.xdelta`. Copy the result back over the original. Then, in VitaShell, press
+   △ and choose *Refresh LiveArea*.
+
+**Uninstall:** delete `ux0:rePatch/PCSG00278/`. If you did step 6, also put your backup `param.sfo` back and
+refresh the LiveArea again.
+
+### Vita3K
+
+1. Find the installed game at `<Vita3K data>/ux0/app/PCSG00278/`. Back up `eboot.bin` and
+   `LINKDATA_NGP/LINKDATA.B` and `LINKDATA.C`.
+2. Apply the LINKDATA patches to the files from that folder.
+3. Apply the eboot patch to a decrypted `eboot.bin.elf`. You can get one from FAGDec on a Vita, or from
+   Vita3K's *ELF dumping* option (Settings → Debug), which writes
+   `elfdumps/PCSG00278/0x81000000-0x8137BCCC_app0.elf`. Rename it to `eboot.bin.elf` and check its SHA-1
+   against `checksums.txt`.
+4. Put the three patched files into `ux0/app/PCSG00278/`, replacing the originals.
+5. *Optional:* apply `param.sfo.xdelta` to `ux0/app/PCSG00278/sce_sys/param.sfo` for the English name in the
+   game list. You may need to restart Vita3K or refresh the game list.
+
+## Known issues
+
+- Some menu and table lines are still in Japanese: about 780 lines the PS3 release left blank, and 5 tables
+  whose line counts differ between the two versions.
+- Some images with Japanese text remain, such as tutorial pictures.
+- Long lines in story and battle text boxes are drawn in a smaller font so that they fit.
+- Real-hardware testing is still in progress. Vita3K has been tested.
+<!-- install:end -->
 
 ## What's translated
 
@@ -52,13 +101,6 @@ v1.00 and that the source file is decrypted. For **Vita3K**, see [docs/INSTALL.m
 | Game name on the home screen | ✅ Optional |
 | ~780 lines the PS3 release left blank, 5 tables with different line counts | ⏳ Still Japanese |
 | Other images with Japanese text (e.g. tutorial pictures) | ⏳ To do |
-
-## Known issues
-
-- Some menu and table lines are still in Japanese (see the table above).
-- Some images with Japanese text remain.
-- Long lines in story and battle boxes use a smaller font so they fit.
-- Real-hardware testing is still in progress.
 
 ---
 
@@ -147,7 +189,6 @@ tools/build_sfo.py       English game name in param.sfo
 tools/g1t*.py, dxt.py    G1T texture decoding / DXT5 encoding
 tools/re/                reverse-engineering helpers for the eboot
 scripts/make_release.py  full build + xdelta release package
-docs/INSTALL.md          player install guide (shipped in the release zip)
 ```
 
 ## Credits
