@@ -29,7 +29,8 @@ data is included.
   - **FAGDec**, to decrypt the game's `eboot.bin`.
   - **VitaShell**, to copy files between the Vita and your PC.
 - **For [Vita3K](https://vita3k.org/):** the game installed in Vita3K. Its files are already decrypted.
-- **xdelta**, to apply the patches on your PC. Any xdelta3 tool works, such as *xdelta UI* or *Delta Patcher*.
+- **[Delta Patcher](https://github.com/marco-calautti/DeltaPatcher/releases)** (recommended), to apply the
+  patches on your PC. It's the tool the patch was tested with; other xdelta3 tools should also work.
 
 ### The patch files
 
