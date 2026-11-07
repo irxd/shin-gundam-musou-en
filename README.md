@@ -6,8 +6,8 @@ The game was released in the West only on PS3, as *Dynasty Warriors: Gundam Rebo
 **official English localization** from the PS3 release onto the Japanese Vita release. Both versions run on the same
 engine and use the same data layout.
 
-> **Status: playable in English (v0.2.0, early test release; game versions 1.00 and 1.02).** Tested in Vita3K; real-hardware testing in
-> progress. Download the patch from the [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page.
+> **Status: playable in English (v0.2.0, early test release; game versions 1.00 and 1.02).** Tested on a real
+> PS Vita and in Vita3K. Download the patch from the [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page.
 
 <!-- install:start  (this section is copied into INSTALL.md in the release zip by scripts/make_release.py) -->
 ## Installation
@@ -41,10 +41,6 @@ patch** to use. Everything else is the same.
 | `eboot.bin` (decrypt with FAGDec to `eboot.bin.elf`) | from `ux0:app/PCSG00278/` + `patches/eboot_v1.00.xdelta` | from `ux0:patch/PCSG00278/` + `patches/eboot_v1.02.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
 | `LINKDATA_NGP/LINKDATA.B` (decrypted) | from `ux0:app/PCSG00278/` + `patches/LINKDATA.B.xdelta` | same as 1.00 (the update doesn't include it) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
 | `LINKDATA_NGP/LINKDATA.C` (decrypted) | from `ux0:app/PCSG00278/` + `patches/LINKDATA.C.xdelta` | same as 1.00 (the update doesn't include it) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
-| `sce_sys/param.sfo` *(optional)* | from `ux0:app/PCSG00278/` + `patches/param_v1.00.sfo.xdelta` | from `ux0:patch/PCSG00278/` + `patches/param_v1.02.sfo.xdelta` | back to where it came from |
-
-The optional `param.sfo` patch changes the game's name on the home screen from 真・ガンダム無双 to
-*Shin Gundam Musou*. It is the only file that is changed in place instead of going into `ux0:rePatch`.
 
 `checksums.txt` in the zip lists the SHA-1 of each expected source file and of each patched result. If a source
 file doesn't match, the patch will fail: check that you used the patch for your game version and that the file
@@ -82,13 +78,8 @@ is decrypted.
    ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C
    ```
 5. Reboot the Vita and start the game.
-6. *Optional: English name on the home screen.* Copy `sce_sys/param.sfo` to your PC (from
-   `ux0:app/PCSG00278/` on 1.00, or from `ux0:patch/PCSG00278/` with the 1.02 update), keep a backup, and apply
-   `param_v1.00.sfo.xdelta` or `param_v1.02.sfo.xdelta`. Copy the result back over the original. Then, in
-   VitaShell, press △ and choose *Refresh LiveArea*.
 
-**Uninstall:** delete `ux0:rePatch/PCSG00278/`. If you did step 6, also put your backup `param.sfo` back and
-refresh the LiveArea again.
+Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePatch/PCSG00278/`.
 
 ### Vita3K
 
@@ -102,8 +93,6 @@ refresh the LiveArea again.
 4. Put the patched LINKDATA files into `ux0/app/PCSG00278/LINKDATA_NGP/`, replacing the originals. Put the
    patched `eboot.bin` into `ux0/app/PCSG00278/` (1.00), or into `ux0/patch/PCSG00278/` if the 1.02 update
    is installed in Vita3K.
-5. *Optional:* apply the `param` patch for your version to that folder's `sce_sys/param.sfo` for the English
-   name in the game list. You may need to restart Vita3K or refresh the game list.
 
 ## Known issues
 
@@ -111,7 +100,9 @@ refresh the LiveArea again.
   whose line counts differ between the two versions.
 - Some images with Japanese text remain, such as tutorial pictures.
 - Long lines in story and battle text boxes are drawn in a smaller font so that they fit.
-- Real-hardware testing is still in progress. Vita3K has been tested.
+- The game's name on the home screen stays 真・ガンダム無双. Changing it via `param.sfo` did not update the
+  LiveArea in testing; a fix is planned for a later version.
+- Tested on a real PS Vita (1.02, via rePatch) and in Vita3K (1.00 and 1.02). Please report problems.
 <!-- install:end -->
 
 ## What's translated
@@ -123,7 +114,7 @@ refresh the LiveArea again.
 | Story scenes & narration | ✅ 5,461 lines |
 | Font | ✅ Proportional English text with word wrap; long lines shrink to fit their box |
 | Images: YES/NO/OK buttons, chapter title cards, boot notice & logo, title screen | ✅ |
-| Game name on the home screen | ✅ Optional |
+| Game name on the home screen | ⏳ Still Japanese (planned) |
 | ~780 lines the PS3 release left blank, 5 tables with different line counts | ⏳ Still Japanese |
 | Other images with Japanese text (e.g. tutorial pictures) | ⏳ To do |
 
@@ -150,7 +141,7 @@ Requirements: Windows, Python 3.10+ with Pillow and keystone-engine, 7-Zip and x
 
 - decrypted Vita `LINKDATA_NGP/LINKDATA.B` and `.C` → `decrypted/vita/LINKDATA_NGP/`
   (Vita3K install, or VitaShell *Open decrypted*), original `sce_sys/param.sfo` → `decrypted/vita/param.sfo.orig`
-  (and the update's → `decrypted/vita/param_102.sfo.orig`)
+  (and the update's → `decrypted/vita/param_102.sfo.orig`; only for the experimental `tools/build_sfo.py`)
 - FAGDec output `eboot.bin.elf` + `self_auth.bin` → `PCSG00278_100/` (game 1.00) and `PCSG00278_102/`
   (update 1.02; `python -P tools/unfself.py eboot.bin eboot.bin.elf` turns FAGDec's decrypted SELF into the ELF)
 - PS3 `LINKDATA_PS3/LINKDATA.B` and `.C` extracted from the ISO with 7-Zip → `decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/`
@@ -161,9 +152,9 @@ Then:
 python -P scripts/make_release.py 0.2.0
 ```
 
-This builds the patched eboot (fself), `LINKDATA.B` (text), `LINKDATA.C` (font + images) and `param.sfo` into
+This builds the patched eboot (fself, one per game version), `LINKDATA.B` (text) and `LINKDATA.C` (font + images) into
 `build/`, creates xdelta patches, verifies they round-trip, and writes `release/…zip`. The individual steps are
-`tools/build_font.py`, `tools/build_images.py`, `tools/build_text.py` and `tools/build_sfo.py`.
+`tools/build_font.py`, `tools/build_images.py` and `tools/build_text.py`.
 
 ## How it works
 
@@ -212,7 +203,7 @@ tools/story.py           story/event scene format (entry 171)
 tools/textwrap_vita.py   line breaking + per-string text scale markers
 tools/build_font.py      font atlas widths + eboot hooks (proportional text, word wrap, scale) -> fself
 tools/build_images.py    English textures from the PS3 release (buttons, title cards, logos, notice)
-tools/build_sfo.py       English game name in param.sfo
+tools/build_sfo.py       English game name in param.sfo (experimental, not in the release yet)
 tools/unfself.py         decrypted SELF (FAGDec) -> ELF
 tools/g1t*.py, dxt.py    G1T texture decoding / DXT5 encoding
 tools/re/                reverse-engineering helpers for the eboot

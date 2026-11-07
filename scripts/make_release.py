@@ -78,7 +78,6 @@ def main():
     # 1. build everything from the pristine inputs
     for v, (fag, out_v, sfo, sfo_out, _) in GAME.items():   # eboot per version (+ font atlas, same for all)
         py('build_font.py', VITA / 'LINKDATA.C', fag / 'eboot.bin.elf', fag / 'self_auth.bin', out_v)
-        py('build_sfo.py', sfo, sfo_out)
     BUILD.joinpath('LINKDATA_NGP').mkdir(parents=True, exist_ok=True)
     shutil.copy(GAME['1.00'][1] / 'LINKDATA_NGP/LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C')
     for v, (_, out_v, *_r) in GAME.items():
@@ -98,8 +97,9 @@ def main():
          'ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C'),
     ]
     for v, (fag, out_v, sfo, sfo_out, sfo_dest) in GAME.items():
-        pairs += [(fag / 'eboot.bin.elf', out_v / 'eboot.bin', f'eboot_v{v}.xdelta', 'ux0:rePatch/PCSG00278/eboot.bin'),
-                  (sfo, sfo_out, f'param_v{v}.sfo.xdelta', f'{sfo_dest} (optional)')]
+        pairs += [(fag / 'eboot.bin.elf', out_v / 'eboot.bin', f'eboot_v{v}.xdelta', 'ux0:rePatch/PCSG00278/eboot.bin')]
+        # (param.sfo / home-screen name: tools/build_sfo.py works, but the LiveArea didn't pick it up on
+        #  hardware, so it is not shipped yet)
     lines = []
     for src, dst, name, dest in pairs:
         run(xdelta, '-e', '-9', '-f', '-s', src, dst, out / 'patches' / name)
