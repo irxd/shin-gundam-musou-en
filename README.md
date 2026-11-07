@@ -104,6 +104,9 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 - Some menu and table lines are still in Japanese: about 780 lines the PS3 release left blank, and 5 tables
   whose line counts differ between the two versions.
 - Some images with Japanese text remain, such as tutorial pictures.
+- DLC (the extra scenarios and mobile suits) is not translated yet and hasn't been tested with the patch.
+  The patch doesn't change any DLC files; DLC scenario text will most likely show in Japanese. Planned for a
+  later version.
 - Long lines in story and battle text boxes are drawn in a smaller font so that they fit.
 - The game's name on the home screen stays 真・ガンダム無双. Changing it via `param.sfo` did not update the
   LiveArea in testing; a fix is planned for a later version.
@@ -122,6 +125,7 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 | Game name on the home screen | ⏳ Still Japanese (planned) |
 | ~780 lines the PS3 release left blank, 5 tables with different line counts | ⏳ Still Japanese |
 | Other images with Japanese text (e.g. tutorial pictures) | ⏳ To do |
+| DLC (16 extra scenarios, 4 extra mobile suits) | ⏳ Planned for a later version |
 
 ## Screenshots
 
