@@ -444,7 +444,8 @@ def main():
 
     new_elf = patch_elf(elf, patches)
     open(os.path.join(out_dir, 'eboot.bin.elf'), 'wb').write(new_elf)
-    fself = make_fself(new_elf, authid=authid_from_self_auth(self_auth), compress=True)
+    # uncompressed: keeps the release xdelta small (only our changes, not the whole recompressed eboot)
+    fself = make_fself(new_elf, authid=authid_from_self_auth(self_auth), compress=False)
     open(os.path.join(out_dir, 'eboot.bin'), 'wb').write(fself)
 
     # ASCII advance widths for build_text.py's pre-wrapping -> build/ascii_widths.json
