@@ -5,8 +5,10 @@ Usage (from the repo root):
 
 Needs xdelta3 (tools/bin/xdelta3.exe or on PATH) and these local inputs:
     decrypted/vita/LINKDATA_NGP/LINKDATA.B, LINKDATA.C    original decrypted Vita files (PCSG00278 v1.00)
-    PCSG00278/eboot.bin.elf, self_auth.bin                FAGDec output for the same game
-    decrypted/vita/param.sfo.orig                         original sce_sys/param.sfo
+    PCSG00278_100/eboot.bin.elf, self_auth.bin            FAGDec output, game version 1.00
+    PCSG00278_102/eboot.bin.elf, self_auth.bin            FAGDec output, update 1.02 (tools/unfself.py makes
+                                                          the .elf from FAGDec's decrypted SELF)
+    decrypted/vita/param.sfo.orig, param_102.sfo.orig     original sce_sys/param.sfo of the game / of the update
     decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/LINKDATA.B, LINKDATA.C   PS3 EU source of the English text/images
 
 Output: release/shin-gundam-musou-vita-english-<version>/  (+ .zip)
@@ -17,10 +19,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 VITA = ROOT / 'decrypted/vita/LINKDATA_NGP'
 PS3 = ROOT / 'decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3'
-FAGDEC = ROOT / 'PCSG00278'
-BUILD = ROOT / 'build/rePatch/PCSG00278'
-SFO = ROOT / 'decrypted/vita/param.sfo.orig'          # original sce_sys/param.sfo
-SFO_OUT = ROOT / 'build/sce_sys/param.sfo'             # not a rePatch file: goes to ux0:app/.../sce_sys
+BUILD = ROOT / 'build/rePatch/PCSG00278'                # LINKDATA (same for every game version)
+# game versions: (FAGDec dir, eboot build dir, original param.sfo, patched param.sfo, where it goes)
+GAME = {
+    '1.00': (ROOT / 'PCSG00278_100', ROOT / 'build/v100', ROOT / 'decrypted/vita/param.sfo.orig',
+             ROOT / 'build/sce_sys/param.sfo', 'ux0:app/PCSG00278/sce_sys/param.sfo'),
+    '1.02': (ROOT / 'PCSG00278_102', ROOT / 'build/v102', ROOT / 'decrypted/vita/param_102.sfo.orig',
+             ROOT / 'build/sce_sys_102/param.sfo', 'ux0:patch/PCSG00278/sce_sys/param.sfo'),
+}
 
 
 def run(*args):
@@ -70,10 +76,15 @@ def main():
     xdelta = find_xdelta()
 
     # 1. build everything from the pristine inputs
-    py('build_font.py', VITA / 'LINKDATA.C', FAGDEC / 'eboot.bin.elf', FAGDEC / 'self_auth.bin', BUILD)
+    for v, (fag, out_v, sfo, sfo_out, _) in GAME.items():   # eboot per version (+ font atlas, same for all)
+        py('build_font.py', VITA / 'LINKDATA.C', fag / 'eboot.bin.elf', fag / 'self_auth.bin', out_v)
+        py('build_sfo.py', sfo, sfo_out)
+    BUILD.joinpath('LINKDATA_NGP').mkdir(parents=True, exist_ok=True)
+    shutil.copy(GAME['1.00'][1] / 'LINKDATA_NGP/LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C')
+    for v, (_, out_v, *_r) in GAME.items():
+        shutil.copy(out_v / 'eboot.bin', BUILD.parent / f'eboot_v{v}.bin')
     py('build_images.py', PS3 / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C')
     py('build_text.py', VITA / 'LINKDATA.B', PS3 / 'LINKDATA.B', BUILD / 'LINKDATA_NGP/LINKDATA.B')
-    py('build_sfo.py', SFO, SFO_OUT)
 
     # 2. xdelta: original -> patched
     out = ROOT / 'release' / f'shin-gundam-musou-vita-english-{version}'
@@ -81,11 +92,14 @@ def main():
         shutil.rmtree(out)
     (out / 'patches').mkdir(parents=True)
     pairs = [  # (source the player has, our output, patch name, where it goes)
-        (FAGDEC / 'eboot.bin.elf', BUILD / 'eboot.bin', 'eboot.bin.xdelta', 'eboot.bin'),
-        (VITA / 'LINKDATA.B', BUILD / 'LINKDATA_NGP/LINKDATA.B', 'LINKDATA.B.xdelta', 'LINKDATA_NGP/LINKDATA.B'),
-        (VITA / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C', 'LINKDATA.C.xdelta', 'LINKDATA_NGP/LINKDATA.C'),
-        (SFO, SFO_OUT, 'param.sfo.xdelta', 'sce_sys/param.sfo (optional)'),
+        (VITA / 'LINKDATA.B', BUILD / 'LINKDATA_NGP/LINKDATA.B', 'LINKDATA.B.xdelta',
+         'ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B'),
+        (VITA / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C', 'LINKDATA.C.xdelta',
+         'ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C'),
     ]
+    for v, (fag, out_v, sfo, sfo_out, sfo_dest) in GAME.items():
+        pairs += [(fag / 'eboot.bin.elf', out_v / 'eboot.bin', f'eboot_v{v}.xdelta', 'ux0:rePatch/PCSG00278/eboot.bin'),
+                  (sfo, sfo_out, f'param_v{v}.sfo.xdelta', f'{sfo_dest} (optional)')]
     lines = []
     for src, dst, name, dest in pairs:
         run(xdelta, '-e', '-9', '-f', '-s', src, dst, out / 'patches' / name)
@@ -94,8 +108,7 @@ def main():
         ok = sha1(check) == sha1(dst)
         check.unlink()
         assert ok, f'{name}: applying the patch does not reproduce {dst}'
-        target = dest if dest.startswith('sce_sys') else f'rePatch/PCSG00278/{dest}'
-        lines.append(f'{name:20} {src.name:14} sha1 {sha1(src)}  ->  {target}  sha1 {sha1(dst)}')
+        lines.append(f'{name:24} source sha1 {sha1(src)}  ->  {dest}  sha1 {sha1(dst)}')
     (out / 'checksums.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
     (out / 'INSTALL.md').write_text(install_text(version), encoding='utf-8')
 

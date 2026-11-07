@@ -9,8 +9,10 @@
      B @0x811d14b4  texture x1 = x0 + w          (was x0 + cell_w)
      C @0x811d14e4  advance/quad width = size * w / 20   (r0, also the return value)
    Width lookup uses compact tables (glyphs 0..127 and 6650..6745; everything else = 20).
-   Code + tables live in the unused tail after the text segment (0x81370340..), so the eboot's segment 0
-   is extended (p_filesz/p_memsz) and the eboot is rebuilt as an fself.
+   Code lives in the small gap after the text segment (segment 0 is extended into it) and in a few spots
+   of the original code that our hooks leave unused; the tables live at the end of segment 1's last page
+   (segment 1's file size is extended to cover them). The eboot is rebuilt as an fself.
+   Supports game versions 1.00 and 1.02 (see VERSIONS).
 3. Output: patched LINKDATA.C, patched eboot.bin (fself) and the patched ELF.
 
 Usage: build_font.py <vita LINKDATA.C> <decrypted eboot.bin.elf> <self_auth.bin> <out dir>
@@ -29,15 +31,21 @@ from fself import make_fself, authid_from_self_auth
 
 FONT_ENTRY = 2608
 SEG0 = 0x81000000
-SEG0_LIMIT = 0x81371000                     # start of segment 1
+SEG1 = 0x81371000                           # start of segment 1 (= end of the gap after segment 0)
+PAGE_SIZE = 0x1000
+
+# Supported game versions: decrypted eboot ELF sha1 -> (name, shift of the text renderer code vs 1.00).
+# 1.02's renderer is the same code moved by +0xa50; all hook addresses in this file are 1.00 addresses.
+VERSIONS = {
+    '69e7eb06314f1f1297fe15758afadad946dbb7a0': ('1.00', 0x000),
+    'a3e44c93e09b713279003ae812c313851128d04f': ('1.02', 0xa50),
+}
+
 HOOK_A, RET_A = 0x811d146c, 0x811d1472      # adds r6,r0,#0 ; ldr.w r7,[r8]
 HOOK_B = 0x811d14b4                         # add.w r3,fp,sl
 HOOK_C = 0x811d14e4                         # ldr.w r0,[r8,#0x44]
 EXPECT = {HOOK_A: '061cd8f80070', HOOK_B: '0beb0a03', HOOK_C: 'd8f84400'}
-CAVE = 0x81370340
-TAB_LO, LO_N = CAVE, 128
-TAB_HI, HI_FIRST, HI_N = CAVE + 0x80, 6650, 96
-CODE = CAVE + 0x100
+LO_N, HI_FIRST, HI_N = 128, 6650, 96        # width tables: glyphs 0..127 and 6650..6745 (else 20)
 
 NARROW_LOW = [11, 13, 14, 15, 16, 20]     # ‐ ‘ ’ “ ” …
 SPACE_IDX, SPACE_W = 99, 6                # ideographic space
@@ -99,62 +107,30 @@ def build_atlas(g1t, chars):
     return bytes(out), widths
 
 
-# ---------------------------------------------------------------- code
+# ---------------------------------------------------------------- code placement
 def asm(ks, src, addr):
     b, _ = ks.asm(src, addr)
     assert b, f"keystone failed to assemble at {addr:#x}"
     return bytes(b)
 
 
-def build_code():
-    """Returns [(va, bytes)] for hooks (inside existing code) and cave code (after segment 0)."""
-    ks = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
-    lo16 = lambda v: v & 0xffff
-    hi16 = lambda v: v >> 16
-    # cave A: replicate the 2 replaced instructions, then w = width(r0) -> [sp]. Scratch: r1, ip.
-    cave_a_src = f"""
-        adds r6, r0, #0
-        ldr.w r7, [r8]
-        cmp r0, #{LO_N}
-        blo low
-        movw ip, #{HI_FIRST}
-        subs.w r1, r0, ip
-        blo full
-        cmp r1, #{HI_N}
-        bhs full
-        movw ip, #{lo16(TAB_HI)}
-        movt ip, #{hi16(TAB_HI)}
-        ldrb.w r1, [ip, r1]
-        b store
-    low:
-        movw ip, #{lo16(TAB_LO)}
-        movt ip, #{hi16(TAB_LO)}
-        ldrb.w r1, [ip, r0]
-        b store
-    full:
-        movs r1, #{CELL}
-    store:
-        str r1, [sp]
-        b.w #{RET_A:#x}
-    """
-    cave_a = asm(ks, cave_a_src, CODE)
-    # cave C (called with bl; lr is dead here): r0 = size * w / 20  (x*3277>>16 == x/20 for our range)
-    cave_c_addr = (CODE + len(cave_a) + 3) & ~3
-    cave_c = asm(ks, """
-        ldr.w r0, [r8, #0x44]
-        ldr r1, [sp]
-        muls r0, r1, r0
-        movw r1, #3277
-        muls r0, r1, r0
-        lsrs r0, r0, #16
-        bx lr
-    """, cave_c_addr)
-    hook_a = asm(ks, f'b.w #{CODE:#x}', HOOK_A) + asm(ks, 'nop', HOOK_A + 4)
-    hook_b = asm(ks, 'ldr r3, [sp]\nadd r3, fp', HOOK_B)
-    hook_c = asm(ks, f'bl #{cave_c_addr:#x}', HOOK_C)
-    assert (len(hook_a), len(hook_b), len(hook_c)) == (6, 4, 4), (len(hook_a), len(hook_b), len(hook_c))
-    patches = [(HOOK_A, hook_a), (HOOK_B, hook_b), (HOOK_C, hook_c), (CODE, cave_a), (cave_c_addr, cave_c)]
-    return patches, (cave_c_addr + len(cave_c) + 3) & ~3
+class Space:
+    """Free code regions; place() puts each routine in the smallest region it fits (4-byte aligned)."""
+    def __init__(self, ks, regions):
+        self.ks, self.free, self.out = ks, [list(r) for r in regions], []
+
+    def place(self, src_fn):
+        probe = max(self.free, key=lambda r: r[1] - r[0])[0]
+        size = len(asm(self.ks, src_fn(probe), probe))
+        for r in sorted(self.free, key=lambda r: r[1] - r[0]):
+            if r[1] - r[0] >= size:
+                code = asm(self.ks, src_fn(r[0]), r[0])
+                assert r[0] + len(code) <= r[1]
+                self.out.append((r[0], code))
+                addr = r[0]
+                r[0] = (r[0] + len(code) + 3) & ~3
+                return addr
+        raise SystemExit(f'no room for a {size}-byte routine; free: {[(hex(a), b - a) for a, b in self.free]}')
 
 
 # ---------------------------------------------------------------- line wrapping / spaces / measuring
@@ -172,12 +148,21 @@ RENDER_SPACE = 0x811d1c6e    # ldr.w r6, [r8, #0x44]
 MEASURE_ASCII = 0x811d1ff8   # ldr.w lr, [r8, #0x44] ; add sb, lr
 MEASURE_NEXT = 0x811d1fb6
 BUF_SLOT = 0x50              # unused stack slot in the breaker's frame
-# Text boxes (e.g. tutorials) draw each wrapped line with a per-line char cap
-# [state+0x58] = box_width / size (0x811d23b0: bl divide), i.e. 20 chars. Proportional lines hold more,
-# so the cap is replaced by a constant and width-based wrapping alone decides line length.
-LINE_CAP = 0x811d23b0        # bl #0x8130b444 (divide) -> movs r0, #255 ; nop
+# Text boxes (e.g. tutorials) draw each wrapped line with a per-line char cap [state+0x58] =
+# box_width / size (0x811d23a0..: argument setup + bl divide), i.e. 20 chars. Proportional lines hold
+# more, so the cap becomes a constant: `movs r0,#255; b 0x811d23b4`, which also frees the 16 bytes after it
+# (the stores there repeat ones made just before).
+LINE_CAP, LINE_CAP_END = 0x811d23a0, 0x811d23b4
+# Icon width check in the breaker (0x811d2214..0x811d2264): seven compares of the char against the icon
+# codes U+E019, E01C, ... E02B (step 3), each tripling the width. Rewritten compactly with the same
+# result, which frees the rest of that block for our code.
+PUA_CHECK, PUA_TRIPLE, PUA_DONE = 0x811d2214, 0x811d2264, 0x811d2268
+# Original instructions after our overflow hook are never reached any more (no branch targets inside).
+OVF_DEAD = (0x811d22b4, 0x811d22ca)
 EXPECT_WRAP = {WRAP_ENTRY: 'cde91234', WRAP_WIDTH: 'daf84420', WRAP_OVF: '5046fef7ddff0028',
-               RENDER_SPACE: 'd8f84460', MEASURE_ASCII: 'd8f844e0f144', LINE_CAP: '39f148f8'}
+               RENDER_SPACE: 'd8f84460', MEASURE_ASCII: 'd8f844e0f144',
+               LINE_CAP: 'd9f83000cbf86078d8f84810cbf85ca8',
+               PUA_CHECK: 'c0f2ee008142', PUA_TRIPLE: 'c2eb82029044'}
 
 
 def ascii_widths(chars, widths):
@@ -190,28 +175,33 @@ def ascii_widths(chars, widths):
     return bytes(out)
 
 
-def build_wrap_code(base, ascii_tab):
-    ks = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
-    lo16 = lambda v: v & 0xffff
-    hi16 = lambda v: v >> 16
-    tab = base
-    pos = (base + len(ascii_tab) + 3) & ~3
-    out = [(tab, ascii_tab)]
+# ---------------------------------------------------------------- per-string text scale
+# Box draw function 0x811d22ec(state r8, text r7, ..., box sb). At 0x811d2358 the box parameters have
+# just been applied to the font state, which the function saves/restores around the draw. A string
+# starting with ESC + chr(0x60 + s), 16 <= s <= 31, is drawn at s/32 size: glyph width (+0x44), height
+# (+0x48) and line spacing (+0x50) are scaled. ESC + any letter except 'C' is a 2-byte no-op for the
+# renderer, measurer and line breaker, so the marker itself is invisible. build_text.py adds it to
+# strings that need more lines than their box holds.
+FIT_HOOK, FIT_RET = 0x811d2358, 0x811d235c      # ldr.w r0, [sb, #0x30]
+SCALE_BASE, SCALE_MIN, SCALE_MAX = 0x60, 16, 31
+EXPECT_FIT = {FIT_HOOK: 'd9f83000'}
 
-    def place(src):
-        nonlocal pos
-        code = asm(ks, src, pos)
-        out.append((pos, code)); addr = pos
-        pos = (pos + len(code) + 3) & ~3
-        return addr
 
+def build_code(ks, sp, d, tab_lo, tab_hi, tab_ascii):
+    """All hooks + routines. d = renderer shift for this game version. Returns [(va, bytes)]."""
+    A = lambda va: va + d
+    lo16, hi16 = (lambda v: v & 0xffff), (lambda v: v >> 16)
+    hooks = []
+
+    # --- proportional glyphs (F0 glyph function 0x811d1434)
+    # word wrap first: it is the biggest routine and only fits in the gap after segment 0
     # asciiw: r0 = char, r1 = size -> r0 = scaled width (size for non-ASCII). clobbers ip.
-    asciiw = place(f"""
+    asciiw = sp.place(lambda at: f"""
         sub ip, r0, #0x20
         cmp ip, #95
         bhs notascii
-        movw r0, #{lo16(tab)}
-        movt r0, #{hi16(tab)}
+        movw r0, #{lo16(tab_ascii)}
+        movt r0, #{hi16(tab_ascii)}
         ldrb.w r0, [r0, ip]
         mul r0, r1, r0
         movw ip, #3277
@@ -222,23 +212,9 @@ def build_wrap_code(base, ascii_tab):
         mov r0, r1
         bx lr
     """)
-    entry = place(f"""
-        strd r3, r4, [sp, #0x48]
-        str r1, [sp, #{BUF_SLOT}]
-        bx lr
-    """)
-    # breaker char width: r1 = char (keep), r0 live (keep) -> r2
-    width = place(f"""
-        push {{r0, r1, lr}}
-        mov r0, r1
-        ldr.w r1, [sl, #0x44]
-        bl #{asciiw:#x}
-        mov r2, r0
-        pop {{r0, r1, pc}}
-    """)
     # overflow: word wrap. state: r6 = out ptr (current char not written yet), r8 = width incl. char,
     # sb = line count, [sp,#4] = char, [sp,#BUF_SLOT] = buffer start. r0-r3, ip, lr are free.
-    ovf = place(f"""
+    ovf = sp.place(lambda at: f"""
         ldr r0, [sp, #4]
         cmp r0, #0x20
         bne scan
@@ -246,7 +222,7 @@ def build_wrap_code(base, ascii_tab):
         strb r0, [r6], #1
         mov.w r8, #0
         add.w sb, sb, #1
-        b.w #{WRAP_NEXT:#x}
+        b.w #{A(WRAP_NEXT):#x}
     scan:
         ldr r2, [sp, #{BUF_SLOT}]
         mov r3, r6
@@ -292,14 +268,14 @@ def build_wrap_code(base, ascii_tab):
         ldr.w r1, [sl, #0x44]
         bl #{asciiw:#x}
         add r8, r0
-        b.w #{WRAP_EMIT:#x}
+        b.w #{A(WRAP_EMIT):#x}
     fallback:
         mov r0, sl
         ldr r1, [sp, #4]
-        bl #{KINSOKU:#x}
+        bl #{A(KINSOKU):#x}
         cmp r0, #0
         bne do_break
-        b.w #{WRAP_EMIT:#x}
+        b.w #{A(WRAP_EMIT):#x}
     do_break:
         movs r0, #0x0a
         strb r0, [r6], #1
@@ -308,56 +284,42 @@ def build_wrap_code(base, ascii_tab):
         bl #{asciiw:#x}
         mov r8, r0
         add.w sb, sb, #1
-        b.w #{WRAP_EMIT:#x}
+        b.w #{A(WRAP_EMIT):#x}
     """)
-    space = place(f"""
-        push {{r0, r1, lr}}
-        movs r0, #0x20
-        ldr.w r1, [r8, #0x44]
-        bl #{asciiw:#x}
-        mov r6, r0
-        pop {{r0, r1, pc}}
+    # cave A: replicate the 2 replaced instructions, then w = width(r0) -> [sp]. Scratch: r1, ip.
+    cave_a = sp.place(lambda at: f"""
+        adds r6, r0, #0
+        ldr.w r7, [r8]
+        cmp r0, #{LO_N}
+        blo low
+        movw ip, #{HI_FIRST}
+        subs.w r1, r0, ip
+        blo full
+        cmp r1, #{HI_N}
+        bhs full
+        movw ip, #{lo16(tab_hi)}
+        movt ip, #{hi16(tab_hi)}
+        ldrb.w r1, [ip, r1]
+        b store
+    low:
+        movw ip, #{lo16(tab_lo)}
+        movt ip, #{hi16(tab_lo)}
+        ldrb.w r1, [ip, r0]
+        b store
+    full:
+        movs r1, #{CELL}
+    store:
+        str r1, [sp]
+        b.w #{A(RET_A):#x}
     """)
-    measure = place(f"""
-        push {{lr}}
-        mov r0, r2
-        ldr.w r1, [r8, #0x44]
-        bl #{asciiw:#x}
-        add sb, r0
-        pop {{pc}}
-    """)
-    hooks = [
-        (WRAP_ENTRY, asm(ks, f'bl #{entry:#x}', WRAP_ENTRY)),
-        (WRAP_WIDTH, asm(ks, f'bl #{width:#x}', WRAP_WIDTH)),
-        (WRAP_OVF, asm(ks, f'b.w #{ovf:#x}', WRAP_OVF)),
-        (RENDER_SPACE, asm(ks, f'bl #{space:#x}', RENDER_SPACE)),
-        (MEASURE_ASCII, asm(ks, f'bl #{measure:#x}', MEASURE_ASCII) + asm(ks, f'b #{MEASURE_NEXT:#x}', MEASURE_ASCII + 4)),
-        (LINE_CAP, asm(ks, 'movs r0, #255; nop', LINE_CAP)),
-    ]
-    assert [len(b) for _, b in hooks] == [4, 4, 4, 4, 6, 4], [len(b) for _, b in hooks]
-    return hooks + out, pos
-
-
-# ---------------------------------------------------------------- per-string text scale
-# Box draw function 0x811d22ec(state r8, text r7, ..., box sb). At 0x811d2358 the box parameters have
-# just been applied to the font state, which the function saves/restores around the draw. A string
-# starting with ESC + chr(0x60 + s), 16 <= s <= 31, is drawn at s/32 size: glyph width (+0x44), height
-# (+0x48) and line spacing (+0x50) are scaled. ESC + any letter except 'C' is a 2-byte no-op for the
-# renderer, measurer and line breaker, so the marker itself is invisible. build_text.py adds it to
-# strings that need more lines than their box holds.
-FIT_HOOK, FIT_RET = 0x811d2358, 0x811d235c      # ldr.w r0, [sb, #0x30]
-SCALE_BASE, SCALE_MIN, SCALE_MAX = 0x60, 16, 31
-EXPECT_FIT = {FIT_HOOK: 'd9f83000'}
-
-
-def build_fit_code(base):
-    ks = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
-    scale = lambda off: f"""
+    # --- per-string text scale
+    def scale(off):
+        return f"""
         ldr.w r0, [r8, #{off:#x}]
         muls r0, r1, r0
         asrs r0, r0, #5
         str.w r0, [r8, #{off:#x}]"""
-    code = asm(ks, f"""
+    fit = sp.place(lambda at: f"""
         ldrb r0, [r7]
         cmp r0, #0x1b
         bne done
@@ -372,51 +334,159 @@ def build_fit_code(base):
         {scale(0x50)}
     done:
         ldr.w r0, [sb, #0x30]
-        b.w #{FIT_RET:#x}
-    """, base)
-    hook = asm(ks, f'b.w #{base:#x}', FIT_HOOK)
-    assert len(hook) == 4
-    return [(FIT_HOOK, hook), (base, code)], (base + len(code) + 3) & ~3
+        b.w #{A(FIT_RET):#x}
+    """)
+    # cave C (called with bl; lr is dead here): r0 = size * w / 20  (x*3277>>16 == x/20 for our range)
+    cave_c = sp.place(lambda at: """
+        ldr.w r0, [r8, #0x44]
+        ldr r1, [sp]
+        muls r0, r1, r0
+        movw r1, #3277
+        muls r0, r1, r0
+        lsrs r0, r0, #16
+        bx lr
+    """)
+    # breaker char width: r1 = char (keep), r0 live (keep) -> r2
+    width = sp.place(lambda at: f"""
+        push {{r0, r1, lr}}
+        mov r0, r1
+        ldr.w r1, [sl, #0x44]
+        bl #{asciiw:#x}
+        mov r2, r0
+        pop {{r0, r1, pc}}
+    """)
+    space = sp.place(lambda at: f"""
+        push {{r0, r1, lr}}
+        movs r0, #0x20
+        ldr.w r1, [r8, #0x44]
+        bl #{asciiw:#x}
+        mov r6, r0
+        pop {{r0, r1, pc}}
+    """)
+    measure = sp.place(lambda at: f"""
+        push {{lr}}
+        mov r0, r2
+        ldr.w r1, [r8, #0x44]
+        bl #{asciiw:#x}
+        add sb, r0
+        pop {{pc}}
+    """)
+    entry = sp.place(lambda at: f"""
+        strd r3, r4, [sp, #0x48]
+        str r1, [sp, #{BUF_SLOT}]
+        bx lr
+    """)
+    hooks = [
+        (A(HOOK_A), asm(ks, f'b.w #{cave_a:#x}', A(HOOK_A)) + asm(ks, 'nop', A(HOOK_A) + 4)),
+        (A(HOOK_B), asm(ks, 'ldr r3, [sp]\nadd r3, fp', A(HOOK_B))),
+        (A(HOOK_C), asm(ks, f'bl #{cave_c:#x}', A(HOOK_C))),
+        (A(WRAP_ENTRY), asm(ks, f'bl #{entry:#x}', A(WRAP_ENTRY))),
+        (A(WRAP_WIDTH), asm(ks, f'bl #{width:#x}', A(WRAP_WIDTH))),
+        (A(WRAP_OVF), asm(ks, f'b.w #{ovf:#x}', A(WRAP_OVF))),
+        (A(RENDER_SPACE), asm(ks, f'bl #{space:#x}', A(RENDER_SPACE))),
+        (A(MEASURE_ASCII), asm(ks, f'bl #{measure:#x}', A(MEASURE_ASCII))
+                           + asm(ks, f'b #{A(MEASURE_NEXT):#x}', A(MEASURE_ASCII) + 4)),
+        (A(FIT_HOOK), asm(ks, f'b.w #{fit:#x}', A(FIT_HOOK))),
+    ]
+    assert [len(b) for _, b in hooks] == [6, 4, 4, 4, 4, 4, 4, 6, 4], [len(b) for _, b in hooks]
+    return hooks + sp.out
+
+
+def fixed_rewrites(ks, d):
+    """In-place rewrites that also free code space. Returns ([(va, bytes)], [free regions])."""
+    A = lambda va: va + d
+    cap = asm(ks, f'movs r0, #255\nb #{A(LINE_CAP_END):#x}', A(LINE_CAP))
+    assert len(cap) == 4
+    # r0 = 0x8099 here (movw just before the width hook; our width routine preserves r0/r1)
+    pua = asm(ks, f"""
+        movt r0, #0xee
+        subs r0, r1, r0
+        cmp r0, #0x12
+        bhi #{A(PUA_DONE):#x}
+        movw ip, #0x9249
+        movt ip, #0x4
+        lsr.w ip, ip, r0
+        tst.w ip, #1
+        bne #{A(PUA_TRIPLE):#x}
+        b #{A(PUA_DONE):#x}
+    """, A(PUA_CHECK))
+    free = [((A(PUA_CHECK) + len(pua) + 3) & ~3, A(PUA_TRIPLE)),
+            ((A(LINE_CAP) + 4 + 3) & ~3, A(LINE_CAP_END)),
+            (A(OVF_DEAD[0]), A(OVF_DEAD[1]))]
+    return [(A(LINE_CAP), cap), (A(PUA_CHECK), pua)], free
 
 
 # ---------------------------------------------------------------- ELF
-def patch_elf(elf: bytes, patches):
-    """Apply (va, bytes) patches to segment 0, growing segment 0 into the gap before segment 1."""
+def segments(elf):
     e_phoff, = struct.unpack_from('<I', elf, 28)
     e_phnum, = struct.unpack_from('<H', elf, 44)
-    ph = [list(struct.unpack_from('<8I', elf, e_phoff + 32 * i)) for i in range(e_phnum)]
-    p_type, off0, va0, _, fs0, ms0, _, _ = ph[0]
-    assert va0 == SEG0 and fs0 == ms0
-    seg0 = bytearray(elf[off0:off0 + fs0])
-    end = max(va + len(b) for va, b in patches)
-    assert end <= SEG0_LIMIT, 'cave overflows into segment 1'
-    new_fs = max(fs0, (end - SEG0 + 3) & ~3)
-    seg0 += b'\0' * (new_fs - len(seg0))
-    for va, b in patches:
-        o = va - SEG0
-        seg0[o:o + len(b)] = b
-    # rebuild file: ehdr+phdrs, seg0 (grown), then the remaining segments re-laid out after it (16-aligned)
-    out = bytearray(elf[:off0])
-    out += seg0
-    ph[0][4] = ph[0][5] = new_fs
-    for i in range(1, e_phnum):
+    return e_phoff, [list(struct.unpack_from('<8I', elf, e_phoff + 32 * i)) for i in range(e_phnum)]
+
+
+def patch_elf(elf: bytes, patches):
+    """Apply (va, bytes) patches. Segment 0 may grow into the gap before segment 1. Segment 1 may hold
+    data up to the end of its last page: its file size then covers its whole bss (zeros, as before)."""
+    e_phoff, ph = segments(elf)
+    assert ph[0][2] == SEG0 and ph[0][4] == ph[0][5] and ph[1][2] == SEG1
+    placed = 0
+    segs = []
+    for i, p in enumerate(ph):
+        data = bytearray(elf[p[1]:p[1] + p[4]])
+        if i < 2:
+            va = p[2]
+            limit = SEG1 if i == 0 else (va + p[5] + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1)
+            mine = [(a, b) for a, b in patches if va <= a < limit]
+            placed += len(mine)
+            end = max([a + len(b) for a, b in mine], default=va)
+            assert end <= limit, f'segment {i}: patch ends at {end:#x}, past {limit:#x}'
+            size = max(len(data), (end - va + 3) & ~3)
+            data += b'\0' * (size - len(data))
+            for a, b in mine:
+                data[a - va:a - va + len(b)] = b
+            p[4] = len(data)
+            p[5] = max(p[5], len(data))
+        segs.append(data)
+    assert placed == len(patches), 'patch outside segments 0/1'
+    # rebuild file: ehdr+phdrs, then the segments one after another (16-aligned)
+    out = bytearray(elf[:ph[0][1]])
+    for i, p in enumerate(ph):
         out += b'\0' * ((-len(out)) & 0xf)
-        o, fs = ph[i][1], ph[i][4]
-        data = elf[o:o + fs]
-        ph[i][1] = len(out)
-        out += data
-    for i in range(e_phnum):
+        p[1] = len(out)
+        out += segs[i]
+    for i in range(len(ph)):
         struct.pack_into('<8I', out, e_phoff + 32 * i, *ph[i])
     return bytes(out)
+
+
+def check_sites(elf, d):
+    seg_off = lambda va: 0xa0 + va - SEG0
+    for va, hx in {**EXPECT, **EXPECT_WRAP, **EXPECT_FIT}.items():
+        got = elf[seg_off(va + d):seg_off(va + d) + len(hx) // 2].hex()
+        if got != hx:
+            return f'unexpected bytes at {va + d:#x}: {got}'
+    return None
+
+
+def detect_version(elf):
+    import hashlib
+    h = hashlib.sha1(elf).hexdigest()
+    if h in VERSIONS:
+        name, d = VERSIONS[h]
+    else:   # unknown dump: accept it only if every hook site matches for exactly one known version
+        ok = [v for v in VERSIONS.values() if check_sites(elf, v[1]) is None]
+        assert len(ok) == 1, f'unsupported eboot (sha1 {h}); expected the decrypted 1.00 or 1.02 eboot'
+        name, d = ok[0]
+        print(f'warning: unknown eboot sha1 {h}; hook sites match version {name}')
+    err = check_sites(elf, d)
+    assert err is None, err
+    return name, d
 
 
 def main():
     vita_c, elf_path, self_auth, out_dir = sys.argv[1:5]
     elf = open(elf_path, 'rb').read()
-    seg_off = lambda va: 0xa0 + va - SEG0
-    for va, hx in {**EXPECT, **EXPECT_WRAP, **EXPECT_FIT}.items():
-        got = elf[seg_off(va):seg_off(va) + len(hx) // 2].hex()
-        assert got == hx, f'unexpected bytes at {va:#x}: {got} (wrong eboot version?)'
+    version, d = detect_version(elf)
+    _, ph = segments(elf)
 
     chars = load_codes(elf_path)
     ld = LinkData(vita_c)
@@ -429,10 +499,18 @@ def main():
     for i, w in widths.items():
         if i < LO_N: tab_lo[i] = w
         elif HI_FIRST <= i < HI_FIRST + HI_N: tab_hi[i - HI_FIRST] = w
-    glyph_patches, free = build_code()
-    wrap_patches, free = build_wrap_code(free, ascii_widths(chars, widths))
-    fit_patches, free = build_fit_code(free)
-    patches = [(TAB_LO, bytes(tab_lo)), (TAB_HI, bytes(tab_hi))] + glyph_patches + wrap_patches + fit_patches
+    tab_ascii = ascii_widths(chars, widths)
+    # tables: right after segment 1's bss, inside its last page
+    data = (ph[1][2] + ph[1][5] + 15) & ~15
+    t_lo, t_hi, t_ascii = data, data + LO_N, data + LO_N + HI_N
+    tables = [(t_lo, bytes(tab_lo)), (t_hi, bytes(tab_hi)), (t_ascii, bytes(tab_ascii))]
+
+    ks = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
+    rewrites, free = fixed_rewrites(ks, d)
+    gap = ((ph[0][2] + ph[0][4] + 3) & ~3, SEG1)
+    sp = Space(ks, free + [gap])
+    code = build_code(ks, sp, d, t_lo, t_hi, t_ascii)
+    patches = tables + rewrites + code
 
     # LINKDATA.C: copy + overwrite the font entry in place (same size)
     out_c = os.path.join(out_dir, 'LINKDATA_NGP', 'LINKDATA.C')
@@ -449,14 +527,14 @@ def main():
     open(os.path.join(out_dir, 'eboot.bin'), 'wb').write(fself)
 
     # ASCII advance widths for build_text.py's pre-wrapping -> build/ascii_widths.json
-    aw = ascii_widths(chars, widths)
-    wpath = os.path.join(os.path.dirname(os.path.dirname(os.path.normpath(out_dir))), 'ascii_widths.json')
-    json.dump({chr(0x20 + i): aw[i] for i in range(len(aw))}, open(wpath, 'w'), indent=0)
+    wpath = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'build', 'ascii_widths.json')
+    json.dump({chr(0x20 + i): tab_ascii[i] for i in range(len(tab_ascii))}, open(wpath, 'w'), indent=0)
 
-    print('glyph widths set:', len(widths), {chars[i]: widths[i] for i in sorted(widths)[:10]})
-    for va, b in patches:
+    print(f'game version {version} (renderer shift {d:#x})')
+    for va, b in sorted(patches):
         print(f'  {va:#x}: {len(b)} bytes')
-    print(f'segment 0 grown to end at {max(va + len(b) for va, b in patches):#x}; fself {len(fself)} bytes')
+    print('free left:', [(hex(a), b - a) for a, b in sp.free])
+    print(f'fself {len(fself)} bytes')
     print('wrote', out_dir)
 
 

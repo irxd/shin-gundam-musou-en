@@ -4,12 +4,18 @@ sys.path.insert(0, os.path.dirname(__file__))
 from g1t import parse_g1t
 from dxt import unswizzle_blocks, decode_dxt5
 
-CODES_FILE_OFF, CODES_COUNT = 0x371698, 6746     # in the Vita3K app0.elf dump
+CODES_VA, CODES_COUNT = 0x813722b8, 6746        # glyph code list (segment 1; same in 1.00 and 1.02)
 CELL, COLS, PER_PAGE, PAGE = 20, 51, 51 * 51, 1024
 
 def load_codes(elf_path):
     d = open(elf_path, 'rb').read()
-    codes = struct.unpack_from(f'<{CODES_COUNT}I', d, CODES_FILE_OFF)
+    e_phoff, = struct.unpack_from('<I', d, 28)
+    e_phnum, = struct.unpack_from('<H', d, 44)
+    for i in range(e_phnum):
+        _, off, va, _, fs, _, _, _ = struct.unpack_from('<8I', d, e_phoff + 32 * i)
+        if va <= CODES_VA < va + fs:
+            break
+    codes = struct.unpack_from(f'<{CODES_COUNT}I', d, off + CODES_VA - va)
     return [c.to_bytes((c.bit_length() + 7) // 8, 'big').decode('utf-8') for c in codes]
 
 def load_pages(g1t_bytes):

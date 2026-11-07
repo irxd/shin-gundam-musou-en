@@ -12,7 +12,8 @@ TITLE = 'Shin Gundam Musou'
 KEYS = ('TITLE', 'TITLE_00', 'STITLE', 'STITLE_00')    # _00 = shown when the system language is Japanese
 
 
-def set_strings(sfo: bytes, values: dict) -> bytes:
+def set_strings(sfo: bytes, values: dict, required=('TITLE', 'STITLE')) -> bytes:
+    """Replace the given string keys that exist in the file (an update's param.sfo has no *_00 keys)."""
     d = bytearray(sfo)
     magic, _, key_tab, data_tab, n = struct.unpack_from('<4sIIII', d)
     assert magic == b'\0PSF'
@@ -27,13 +28,15 @@ def set_strings(sfo: bytes, values: dict) -> bytes:
             d[data_tab + do:data_tab + do + mx] = v + b'\0' * (mx - len(v))
             struct.pack_into('<I', d, 20 + 16 * i + 4, len(v))
             done.add(key)
-    assert done == set(values), f'missing keys: {set(values) - done}'
+    assert set(required) <= done, f'missing keys: {set(required) - done}'
     return bytes(d)
 
 
 def main():
     src, dst = sys.argv[1:3]
+    import os
     out = set_strings(open(src, 'rb').read(), {k: TITLE for k in KEYS})
+    os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
     open(dst, 'wb').write(out)
     print(f'{dst}: title set to {TITLE!r}')
 

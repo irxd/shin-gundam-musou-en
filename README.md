@@ -6,7 +6,7 @@ The game was released in the West only on PS3, as *Dynasty Warriors: Gundam Rebo
 **official English localization** from the PS3 release onto the Japanese Vita release. Both versions run on the same
 engine and use the same data layout.
 
-> **Status: playable in English (v0.1.0, early test release).** Tested in Vita3K; real-hardware testing in
+> **Status: playable in English (v0.2.0, early test release; game versions 1.00 and 1.02).** Tested in Vita3K; real-hardware testing in
 > progress. Download the patch from the [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page.
 
 <!-- install:start  (this section is copied into INSTALL.md in the release zip by scripts/make_release.py) -->
@@ -17,7 +17,8 @@ data is included.
 
 ### You need
 
-- **The game:** Shin Gundam Musou, Japanese release **PCSG00278, version 1.00**.
+- **The game:** Shin Gundam Musou, Japanese release **PCSG00278**, version **1.00** or **1.02** (the latest
+  update). Check the version in the game's LiveArea or in `sce_sys/param.sfo`.
 - **For a real Vita:**
   - A PS Vita on HENkaku/Ensō.
   - The **rePatch** plugin, installed under `*KERNEL` in `ux0:tai/config.txt` (or `ur0:tai/config.txt`).
@@ -33,26 +34,30 @@ Download the latest `shin-gundam-musou-vita-english-<version>.zip` from the
 
 | Patch | Apply it to | Result goes to |
 |---|---|---|
-| `patches/eboot.bin.xdelta` | `eboot.bin.elf` (decrypted with FAGDec) | `ux0:rePatch/PCSG00278/eboot.bin` |
+| `patches/eboot_v1.00.xdelta` **or** `patches/eboot_v1.02.xdelta` (match your game version) | `eboot.bin.elf` (decrypted with FAGDec) | `ux0:rePatch/PCSG00278/eboot.bin` |
 | `patches/LINKDATA.B.xdelta` | `LINKDATA_NGP/LINKDATA.B` (decrypted) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
 | `patches/LINKDATA.C.xdelta` | `LINKDATA_NGP/LINKDATA.C` (decrypted) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
-| `patches/param.sfo.xdelta` (optional) | `sce_sys/param.sfo` | `ux0:app/PCSG00278/sce_sys/param.sfo` |
+| `patches/param_v1.00.sfo.xdelta` (optional) | `ux0:app/PCSG00278/sce_sys/param.sfo` | the same place |
+| `patches/param_v1.02.sfo.xdelta` (optional) | `ux0:patch/PCSG00278/sce_sys/param.sfo` | the same place |
 
+The 1.02 update only replaces the game's `eboot.bin`, so the LINKDATA patches are the same for both versions.
 The optional `param.sfo` patch changes the game's name on the home screen from 真・ガンダム無双 to
-*Shin Gundam Musou*. It is the only file that goes into `ux0:app` rather than `ux0:rePatch`.
+*Shin Gundam Musou*. It is the only file that is changed in place instead of going into `ux0:rePatch`.
 
 `checksums.txt` in the zip lists the SHA-1 of each expected source file and of each patched result. If a source
-file doesn't match, the patch will fail: check that you have version 1.00 and that the file is decrypted.
+file doesn't match, the patch will fail: check that you used the patch for your game version and that the file
+is decrypted.
 
 ### Real PS Vita (rePatch)
 
 1. **Decrypt the eboot.** In FAGDec, select Shin Gundam Musou (PCSG00278), choose `eboot.bin` and decrypt it
-   to ELF. Copy the resulting `eboot.bin.elf` to your PC.
+   to ELF. With the 1.02 update installed, this is the update's eboot (`ux0:patch/PCSG00278/eboot.bin`).
+   Copy the resulting `eboot.bin.elf` to your PC.
 2. **Copy the decrypted data files.** In VitaShell, go to `ux0:app/PCSG00278/`, open the folder with
    *Open decrypted* (△ menu), and copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to your PC.
    `LINKDATA.C` is about 1 GB.
 3. **Apply the patches** on your PC: each `.xdelta` file plus its source file gives a patched file (see the
-   table above). Name the patched eboot `eboot.bin`.
+   table above). Use the eboot patch for your version and name the patched eboot `eboot.bin`.
 4. **Copy the patched files** to the Vita:
    ```
    ux0:rePatch/PCSG00278/eboot.bin
@@ -60,9 +65,10 @@ file doesn't match, the patch will fail: check that you have version 1.00 and th
    ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C
    ```
 5. Reboot the Vita and start the game.
-6. *Optional: English name on the home screen.* Copy `ux0:app/PCSG00278/sce_sys/param.sfo` to your PC, keep a
-   backup, and apply `param.sfo.xdelta`. Copy the result back over the original. Then, in VitaShell, press
-   △ and choose *Refresh LiveArea*.
+6. *Optional: English name on the home screen.* Copy `sce_sys/param.sfo` to your PC (from
+   `ux0:app/PCSG00278/` on 1.00, or from `ux0:patch/PCSG00278/` with the 1.02 update), keep a backup, and apply
+   `param_v1.00.sfo.xdelta` or `param_v1.02.sfo.xdelta`. Copy the result back over the original. Then, in
+   VitaShell, press △ and choose *Refresh LiveArea*.
 
 **Uninstall:** delete `ux0:rePatch/PCSG00278/`. If you did step 6, also put your backup `param.sfo` back and
 refresh the LiveArea again.
@@ -72,13 +78,15 @@ refresh the LiveArea again.
 1. Find the installed game at `<Vita3K data>/ux0/app/PCSG00278/`. Back up `eboot.bin` and
    `LINKDATA_NGP/LINKDATA.B` and `LINKDATA.C`.
 2. Apply the LINKDATA patches to the files from that folder.
-3. Apply the eboot patch to a decrypted `eboot.bin.elf`. You can get one from FAGDec on a Vita, or from
-   Vita3K's *ELF dumping* option (Settings → Debug), which writes
+3. Apply the eboot patch for your version to a decrypted `eboot.bin.elf`. You can get one from FAGDec on a
+   Vita, or from Vita3K's *ELF dumping* option (Settings → Debug), which writes
    `elfdumps/PCSG00278/0x81000000-0x8137BCCC_app0.elf`. Rename it to `eboot.bin.elf` and check its SHA-1
    against `checksums.txt`.
-4. Put the three patched files into `ux0/app/PCSG00278/`, replacing the originals.
-5. *Optional:* apply `param.sfo.xdelta` to `ux0/app/PCSG00278/sce_sys/param.sfo` for the English name in the
-   game list. You may need to restart Vita3K or refresh the game list.
+4. Put the patched LINKDATA files into `ux0/app/PCSG00278/LINKDATA_NGP/`, replacing the originals. Put the
+   patched `eboot.bin` into `ux0/app/PCSG00278/` (1.00), or into `ux0/patch/PCSG00278/` if the 1.02 update
+   is installed in Vita3K.
+5. *Optional:* apply the `param` patch for your version to that folder's `sce_sys/param.sfo` for the English
+   name in the game list. You may need to restart Vita3K or refresh the game list.
 
 ## Known issues
 
@@ -125,13 +133,15 @@ Requirements: Windows, Python 3.10+ with Pillow and keystone-engine, 7-Zip and x
 
 - decrypted Vita `LINKDATA_NGP/LINKDATA.B` and `.C` → `decrypted/vita/LINKDATA_NGP/`
   (Vita3K install, or VitaShell *Open decrypted*), original `sce_sys/param.sfo` → `decrypted/vita/param.sfo.orig`
-- FAGDec output `eboot.bin.elf` + `self_auth.bin` → `PCSG00278/`
+  (and the update's → `decrypted/vita/param_102.sfo.orig`)
+- FAGDec output `eboot.bin.elf` + `self_auth.bin` → `PCSG00278_100/` (game 1.00) and `PCSG00278_102/`
+  (update 1.02; `python -P tools/unfself.py eboot.bin eboot.bin.elf` turns FAGDec's decrypted SELF into the ELF)
 - PS3 `LINKDATA_PS3/LINKDATA.B` and `.C` extracted from the ISO with 7-Zip → `decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/`
 
 Then:
 
 ```sh
-python -P scripts/make_release.py 0.1.0
+python -P scripts/make_release.py 0.2.0
 ```
 
 This builds the patched eboot (fself), `LINKDATA.B` (text), `LINKDATA.C` (font + images) and `param.sfo` into
@@ -186,6 +196,7 @@ tools/textwrap_vita.py   line breaking + per-string text scale markers
 tools/build_font.py      font atlas widths + eboot hooks (proportional text, word wrap, scale) -> fself
 tools/build_images.py    English textures from the PS3 release (buttons, title cards, logos, notice)
 tools/build_sfo.py       English game name in param.sfo
+tools/unfself.py         decrypted SELF (FAGDec) -> ELF
 tools/g1t*.py, dxt.py    G1T texture decoding / DXT5 encoding
 tools/re/                reverse-engineering helpers for the eboot
 scripts/make_release.py  full build + xdelta release package
