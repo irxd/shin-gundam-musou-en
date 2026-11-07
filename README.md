@@ -9,6 +9,10 @@ engine and use the same data layout.
 > **Status: playable in English (v0.2.0, early test release; game versions 1.00 and 1.02).** Tested on a real
 > PS Vita and in Vita3K. Download the patch from the [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page.
 
+<p align="center"><img src="docs/screenshots/05-story-dialogue.png" width="640" alt="Story scene with English dialogue, on a PS Vita"></p>
+
+More screenshots: [Screenshots](#screenshots).
+
 <!-- install:start  (this section is copied into INSTALL.md in the release zip by scripts/make_release.py) -->
 ## Installation
 
@@ -117,6 +121,16 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 | Game name on the home screen | ⏳ Still Japanese (planned) |
 | ~780 lines the PS3 release left blank, 5 tables with different line counts | ⏳ Still Japanese |
 | Other images with Japanese text (e.g. tutorial pictures) | ⏳ To do |
+
+## Screenshots
+
+Taken on a real PS Vita (game version 1.02).
+
+<table>
+<tr><td><img src="docs/screenshots/04-narration.png" alt="Story narration"><br><sub>Story narration</sub></td><td><img src="docs/screenshots/06-chapter-card.png" alt="Chapter title card"><br><sub>Chapter title card</sub></td><td><img src="docs/screenshots/03-title-select.png" alt="Title select menu"><br><sub>Title select menu</sub></td></tr>
+<tr><td><img src="docs/screenshots/08-battle-dialogue.png" alt="Battle dialogue and mission"><br><sub>Battle dialogue and mission</sub></td><td><img src="docs/screenshots/09-battle-message.png" alt="Battle message"><br><sub>Battle message</sub></td><td><img src="docs/screenshots/07-tutorial.png" alt="Tutorial"><br><sub>Tutorial</sub></td></tr>
+<tr><td><img src="docs/screenshots/02-options.png" alt="Options"><br><sub>Options</sub></td><td><img src="docs/screenshots/01-save-prompt.png" alt="Save data prompt with YES/NO"><br><sub>Save data prompt with YES/NO</sub></td><td><img src="docs/screenshots/05-story-dialogue.png" alt="Story dialogue"><br><sub>Story dialogue</sub></td></tr>
+</table>
 
 ---
 
