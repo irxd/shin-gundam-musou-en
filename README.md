@@ -32,15 +32,17 @@ data is included.
 Download the latest `shin-gundam-musou-vita-english-<version>.zip` from the
 [Releases](https://github.com/irxd/shin-musou-gundam-vita-english/releases) page and unzip it.
 
-| Patch | Apply it to | Result goes to |
-|---|---|---|
-| `patches/eboot_v1.00.xdelta` **or** `patches/eboot_v1.02.xdelta` (match your game version) | `eboot.bin.elf` (decrypted with FAGDec) | `ux0:rePatch/PCSG00278/eboot.bin` |
-| `patches/LINKDATA.B.xdelta` | `LINKDATA_NGP/LINKDATA.B` (decrypted) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
-| `patches/LINKDATA.C.xdelta` | `LINKDATA_NGP/LINKDATA.C` (decrypted) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
-| `patches/param_v1.00.sfo.xdelta` (optional) | `ux0:app/PCSG00278/sce_sys/param.sfo` | the same place |
-| `patches/param_v1.02.sfo.xdelta` (optional) | `ux0:patch/PCSG00278/sce_sys/param.sfo` | the same place |
+First check which version you have: **1.00** (no update) or **1.02** (the update is installed, so
+`ux0:patch/PCSG00278/` exists). The version decides **where the `eboot.bin` comes from** and **which eboot
+patch** to use. Everything else is the same.
 
-The 1.02 update only replaces the game's `eboot.bin`, so the LINKDATA patches are the same for both versions.
+| File | Version 1.00 (no update) | Version 1.02 (update installed) | Result goes to |
+|---|---|---|---|
+| `eboot.bin` (decrypt with FAGDec to `eboot.bin.elf`) | from `ux0:app/PCSG00278/` + `patches/eboot_v1.00.xdelta` | from `ux0:patch/PCSG00278/` + `patches/eboot_v1.02.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
+| `LINKDATA_NGP/LINKDATA.B` (decrypted) | from `ux0:app/PCSG00278/` + `patches/LINKDATA.B.xdelta` | same as 1.00 (the update doesn't include it) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
+| `LINKDATA_NGP/LINKDATA.C` (decrypted) | from `ux0:app/PCSG00278/` + `patches/LINKDATA.C.xdelta` | same as 1.00 (the update doesn't include it) | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
+| `sce_sys/param.sfo` *(optional)* | from `ux0:app/PCSG00278/` + `patches/param_v1.00.sfo.xdelta` | from `ux0:patch/PCSG00278/` + `patches/param_v1.02.sfo.xdelta` | back to where it came from |
+
 The optional `param.sfo` patch changes the game's name on the home screen from 真・ガンダム無双 to
 *Shin Gundam Musou*. It is the only file that is changed in place instead of going into `ux0:rePatch`.
 
@@ -50,14 +52,16 @@ is decrypted.
 
 ### Real PS Vita (rePatch)
 
-1. **Decrypt the eboot.** In FAGDec, select Shin Gundam Musou (PCSG00278), choose `eboot.bin` and decrypt it
-   to ELF. With the 1.02 update installed, this is the update's eboot (`ux0:patch/PCSG00278/eboot.bin`).
-   Copy the resulting `eboot.bin.elf` to your PC.
-2. **Copy the decrypted data files.** In VitaShell, go to `ux0:app/PCSG00278/`, open the folder with
-   *Open decrypted* (△ menu), and copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to your PC.
-   `LINKDATA.C` is about 1 GB.
+1. **Decrypt the eboot** with FAGDec (select Shin Gundam Musou, PCSG00278, choose `eboot.bin`, decrypt to ELF)
+   and copy the resulting `eboot.bin.elf` to your PC:
+   - **1.00:** the game's eboot, `ux0:app/PCSG00278/eboot.bin`.
+   - **1.02:** the update's eboot, `ux0:patch/PCSG00278/eboot.bin`.
+2. **Copy the decrypted data files** (both versions): in VitaShell, go to `ux0:app/PCSG00278/`, open the
+   folder with *Open decrypted* (△ menu), and copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to
+   your PC. `LINKDATA.C` is about 1 GB.
 3. **Apply the patches** on your PC: each `.xdelta` file plus its source file gives a patched file (see the
-   table above). Use the eboot patch for your version and name the patched eboot `eboot.bin`.
+   table above). For the eboot use `eboot_v1.00.xdelta` **or** `eboot_v1.02.xdelta` to match the eboot you
+   decrypted, and name the result `eboot.bin`.
 4. **Copy the patched files** to the Vita:
    ```
    ux0:rePatch/PCSG00278/eboot.bin
