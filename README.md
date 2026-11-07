@@ -52,10 +52,18 @@ is decrypted.
 
 ### Real PS Vita (rePatch)
 
-1. **Decrypt the eboot** with FAGDec (select Shin Gundam Musou, PCSG00278, choose `eboot.bin`, decrypt to ELF)
-   and copy the resulting `eboot.bin.elf` to your PC:
-   - **1.00:** the game's eboot, `ux0:app/PCSG00278/eboot.bin`.
-   - **1.02:** the update's eboot, `ux0:patch/PCSG00278/eboot.bin`.
+1. **Decrypt the eboot with FAGDec:**
+   1. Open FAGDec.
+   2. Select the game **真・ガンダム無双** and press ✕.
+   3. Select the `eboot.bin` for your version and press ✕:
+      - **1.00:** `ux0:app/PCSG00278/eboot.bin`
+      - **1.02:** `ux0:patch/PCSG00278/eboot.bin`
+
+      It now appears on the right, under *Modules to be decrypted*.
+   4. Press ○ to go back to the main menu.
+   5. Press START and choose **START DECRYPT (ELF)**.
+   6. The decrypted file is written to `ux0:FAGDec/app/PCSG00278/` (1.00) or `ux0:FAGDec/patch/PCSG00278/`
+      (1.02). Copy the `eboot.bin.elf` from there to your PC.
 2. **Copy the decrypted data files** (both versions): in VitaShell, go to `ux0:app/PCSG00278/`, open the
    folder with *Open decrypted* (△ menu), and copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to
    your PC. `LINKDATA.C` is about 1 GB.
