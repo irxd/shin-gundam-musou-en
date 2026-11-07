@@ -13,7 +13,6 @@ engine and use the same data layout.
 
 More screenshots: [Screenshots](#screenshots).
 
-<!-- install:start  (this section is copied into INSTALL.md in the release zip by scripts/make_release.py) -->
 ## Installation
 
 The patch is a set of small **xdelta** files that you apply to files from **your own copy** of the game. No game
@@ -111,7 +110,6 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 - The game's name on the home screen stays 真・ガンダム無双. Changing it via `param.sfo` did not update the
   LiveArea in testing; a fix is planned for a later version.
 - Tested on a real PS Vita (1.02, via rePatch) and in Vita3K (1.00 and 1.02). Please report problems.
-<!-- install:end -->
 
 ## What's translated
 

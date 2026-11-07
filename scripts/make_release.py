@@ -57,18 +57,6 @@ def find_xdelta():
     sys.exit('xdelta3 not found: put xdelta3.exe in tools/bin/ or on PATH')
 
 
-def install_text(version):
-    """INSTALL.md for the zip: the README's installation section (between the install markers)."""
-    readme = (ROOT / 'README.md').read_text(encoding='utf-8')
-    start = readme.index('<!-- install:start')
-    body = readme[readme.index('-->', start) + 3:readme.index('<!-- install:end -->')].strip()
-    return (f'# Shin Gundam Musou (PS Vita) – English Patch v{version}\n\n'
-            'English translation of Shin Gundam Musou (PCSG00278), using the official English script and graphics '
-            'from Dynasty Warriors: Gundam Reborn (PS3, Europe).\n'
-            'Project page: https://github.com/irxd/shin-musou-gundam-vita-english\n\n'
-            + body + '\n')
-
-
 def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__)
@@ -110,7 +98,6 @@ def main():
         assert ok, f'{name}: applying the patch does not reproduce {dst}'
         lines.append(f'{name:24} source sha1 {sha1(src)}  ->  {dest}  sha1 {sha1(dst)}')
     (out / 'checksums.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    (out / 'INSTALL.md').write_text(install_text(version), encoding='utf-8')
 
     zpath = out.parent / (out.name + '.zip')
     with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as z:
