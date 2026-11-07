@@ -6,23 +6,24 @@ The game was released in the West only on PS3, as *Dynasty Warriors: Gundam Rebo
 **official English localization** from the PS3 release onto the Japanese Vita release. Both versions run on the same
 engine and use the same data layout.
 
-> **Status: work in progress, not playable in English yet.** No patch release is available. This repository
-> contains only the tools used to build the patch.
+> **Status: playable in English (v0.1.0, early test release).** Tested in Vita3K; real-hardware testing in
+> progress. The release is a set of xdelta patches — see [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Progress
 
 | Area | Status |
 |---|---|
-| Archive format (`LINKDATA`) | ✅ Read / write, byte-exact round trip |
+| Archive format (`LINKDATA`) | ✅ Read / write |
 | Mission dialogue & messages | ✅ Ported (~66k strings) |
-| Names, menus, items, tutorials | ✅ Ported (~5k strings) |
-| Story narration (`LINKDATA.B` entry 171) | ⏳ Format not decoded yet |
-| Lines blank on PS3 (~780) / 5 tables with differing line counts | ⏳ Needs manual review |
-| Font (English text renders monospace / overly wide) | ⏳ To do |
-| Images containing Japanese text | ⏳ To do |
-| Patch distribution (xdelta + rePatch) | ⏳ To do |
-
-Tested in [Vita3K](https://vita3k.org/) so far.
+| Names, menus, items, tutorials, help | ✅ Ported (~5k strings) |
+| Story scenes & narration (`LINKDATA.B` entry 171) | ✅ Ported (5,461 lines) |
+| Font | ✅ Proportional Latin glyphs, word wrap, per-string shrink for long text (eboot patch) |
+| Line breaking | ✅ Pre-wrapped to the Vita box sizes |
+| Images: YES/NO/OK buttons, chapter title cards, boot notice & logo, title screen | ✅ Done |
+| Game name in the home screen (`param.sfo`) | ✅ Optional patch |
+| Lines blank on PS3 (~780) / 5 tables with differing line counts | ⏳ Still Japanese |
+| Other images with Japanese text (tutorial pictures, …) | ⏳ To do |
+| Release packaging (xdelta + rePatch) | ✅ `scripts/make_release.py` |
 
 ## No game data here
 
@@ -38,41 +39,23 @@ The `.gitignore` uses an allow-list, so it ignores everything except source file
 
 ## Building
 
-Requirements: Python 3.10+ (standard library only) and 7-Zip.
+Requirements: Windows, Python 3.10+ with Pillow and keystone-engine, 7-Zip and xdelta3
+(`tools/bin/xdelta3.exe`). Inputs (all from your own copies, see `scripts/make_release.py` for paths):
 
-### 1. Decrypt the Vita dump
+- decrypted Vita `LINKDATA_NGP/LINKDATA.B` and `.C` → `decrypted/vita/LINKDATA_NGP/`
+  (Vita3K install, or VitaShell *Open decrypted*), original `sce_sys/param.sfo` → `decrypted/vita/param.sfo.orig`
+- FAGDec output `eboot.bin.elf` + `self_auth.bin` → `PCSG00278/`
+- PS3 `LINKDATA_PS3/LINKDATA.B` and `.C` extracted from the ISO with 7-Zip → `decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/`
 
-Use one of these options:
-
-- **Vita3K:** zip the `app/PCSG00278` folder and install it with *File → Install .zip, .vpk*. The decrypted files
-  end up in `%APPDATA%\Vita3K\Vita3K\ux0\app\PCSG00278\`.
-- **VitaShell** on a modded Vita: open the game folder, press Triangle, choose *Open decrypted* and copy the files.
-- **psvpfsparser** (NoNpDRM dumps):
-  `powershell -ExecutionPolicy Bypass -File scripts\decrypt_vita.ps1 -Parser C:\path\to\psvpfsparser.exe`
-
-Copy the decrypted `LINKDATA_NGP/LINKDATA.B` to `decrypted/vita/LINKDATA_NGP/LINKDATA.B`.
-
-### 2. Extract the PS3 text archive
+Then:
 
 ```sh
-7z x -o"decrypted/ps3" "Dynasty Warriors - Gundam Reborn (Europe).iso" "PS3_GAME/USRDIR/LINKDATA_PS3/LINKDATA.B"
+python -P scripts/make_release.py 0.1.0
 ```
 
-The ISO must be decrypted. Redump-style images may need PS3Dec and the disc key first.
-
-### 3. Build the English text archive
-
-```sh
-python tools/build_text.py \
-  decrypted/vita/LINKDATA_NGP/LINKDATA.B \
-  decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/LINKDATA.B \
-  build/rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B
-```
-
-### 4. Test
-
-- **Vita3K:** copy the built `LINKDATA.B` over the one in `ux0/app/PCSG00278/LINKDATA_NGP/`. Keep a backup.
-- **Vita:** copy `build/rePatch/PCSG00278/` to `ux0:rePatch/PCSG00278/`. This requires the rePatch plugin.
+This builds the patched eboot (fself), `LINKDATA.B` (text), `LINKDATA.C` (font + images) and `param.sfo` into
+`build/`, creates xdelta patches, verifies they round-trip, and writes `release/…zip`. The individual steps are
+`tools/build_font.py`, `tools/build_images.py`, `tools/build_text.py` and `tools/build_sfo.py`.
 
 ## How it works
 
