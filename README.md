@@ -82,7 +82,6 @@ is decrypted.
    ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B
    ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C
    ```
-5. Reboot the Vita and start the game.
 
 Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePatch/PCSG00278/`.
 
