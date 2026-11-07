@@ -1,0 +1,61 @@
+{
+  "version": "0.2.0",
+  "files": [
+    {
+      "patch": "LINKDATA.B.xdelta",
+      "gameVersion": null,
+      "source": {
+        "name": "LINKDATA.B",
+        "size": 7995392,
+        "sha1": "0a89dc12814312d5143a379eca45e73f85f31058"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B",
+        "size": 7565312,
+        "sha1": "d1684f183f1ddf72e6e9ed2c8061af2d227e8874"
+      }
+    },
+    {
+      "patch": "LINKDATA.C.xdelta",
+      "gameVersion": null,
+      "source": {
+        "name": "LINKDATA.C",
+        "size": 980310016,
+        "sha1": "40d1d61c6ea96c3ffa24a0671f390d07aadda019"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C",
+        "size": 980310016,
+        "sha1": "108c25f394ab5392ed39982bee9ff90650d3aed1"
+      }
+    },
+    {
+      "patch": "eboot_v1.00.xdelta",
+      "gameVersion": "1.00",
+      "source": {
+        "name": "eboot.bin.elf",
+        "size": 3665274,
+        "sha1": "69e7eb06314f1f1297fe15758afadad946dbb7a0"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/eboot.bin",
+        "size": 8634604,
+        "sha1": "61fdc2fcb2ed2cad4d98db89c572b123b910aeb2"
+      }
+    },
+    {
+      "patch": "eboot_v1.02.xdelta",
+      "gameVersion": "1.02",
+      "source": {
+        "name": "eboot.bin.elf",
+        "size": 3668186,
+        "sha1": "a3e44c93e09b713279003ae812c313851128d04f"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/eboot.bin",
+        "size": 8637516,
+        "sha1": "7c9881bff89c0b292c8680af54f5e8fb3ff6ab90"
+      }
+    }
+  ]
+}

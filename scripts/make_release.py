@@ -12,14 +12,16 @@ Needs xdelta3 (tools/bin/xdelta3.exe or on PATH) and these local inputs:
     decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/LINKDATA.B, LINKDATA.C   PS3 EU source of the English text/images
 
 Output: release/shin-gundam-musou-vita-english-<version>/  (+ .zip)
+        docs/patcher/patches/  (the same patches + manifest.json, for the web patcher on GitHub Pages)
 """
-import hashlib, os, shutil, subprocess, sys, zipfile
+import hashlib, json, os, shutil, subprocess, sys, zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 VITA = ROOT / 'decrypted/vita/LINKDATA_NGP'
 PS3 = ROOT / 'decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3'
 BUILD = ROOT / 'build/rePatch/PCSG00278'                # LINKDATA (same for every game version)
+WEB = ROOT / 'docs/patcher/patches'                     # patches served to the web patcher
 # game versions: (FAGDec dir, eboot build dir, original param.sfo, patched param.sfo, where it goes)
 GAME = {
     '1.00': (ROOT / 'PCSG00278_100', ROOT / 'build/v100', ROOT / 'decrypted/vita/param.sfo.orig',
@@ -80,24 +82,40 @@ def main():
     (out / 'patches').mkdir(parents=True)
     pairs = [  # (source the player has, our output, patch name, where it goes)
         (VITA / 'LINKDATA.B', BUILD / 'LINKDATA_NGP/LINKDATA.B', 'LINKDATA.B.xdelta',
-         'ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B'),
+         'ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B', None),
         (VITA / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C', 'LINKDATA.C.xdelta',
-         'ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C'),
+         'ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C', None),
     ]
     for v, (fag, out_v, sfo, sfo_out, sfo_dest) in GAME.items():
-        pairs += [(fag / 'eboot.bin.elf', out_v / 'eboot.bin', f'eboot_v{v}.xdelta', 'ux0:rePatch/PCSG00278/eboot.bin')]
+        pairs += [(fag / 'eboot.bin.elf', out_v / 'eboot.bin', f'eboot_v{v}.xdelta', 'ux0:rePatch/PCSG00278/eboot.bin',
+                   v)]
         # (param.sfo / home-screen name: tools/build_sfo.py works, but the LiveArea didn't pick it up on
         #  hardware, so it is not shipped yet)
-    lines = []
-    for src, dst, name, dest in pairs:
-        run(xdelta, '-e', '-9', '-f', '-s', src, dst, out / 'patches' / name)
+    lines, manifest = [], []
+    for src, dst, name, dest, game_version in pairs:
+        # -S none: no secondary (LZMA) compression and -A: no app header, so the web patcher's small VCDIFF
+        # decoder (docs/patcher/vcdiff.js) reads the same files that desktop xdelta tools apply
+        run(xdelta, '-e', '-9', '-S', 'none', '-A', '-f', '-s', src, dst, out / 'patches' / name)
         check = out / 'verify.tmp'      # round trip: the patch must recreate our file exactly
         run(xdelta, '-d', '-f', '-s', src, out / 'patches' / name, check)
         ok = sha1(check) == sha1(dst)
         check.unlink()
         assert ok, f'{name}: applying the patch does not reproduce {dst}'
         lines.append(f'{name:24} source sha1 {sha1(src)}  ->  {dest}  sha1 {sha1(dst)}')
+        manifest.append({'patch': name, 'gameVersion': game_version,
+                         'source': {'name': 'eboot.bin.elf' if game_version else src.name,
+                                    'size': src.stat().st_size, 'sha1': sha1(src)},
+                         'target': {'path': dest.removeprefix('ux0:'), 'size': dst.stat().st_size,
+                                    'sha1': sha1(dst)}})
     (out / 'checksums.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+    if WEB.exists():
+        shutil.rmtree(WEB)
+    WEB.mkdir(parents=True)
+    for p in (out / 'patches').iterdir():
+        shutil.copy(p, WEB / p.name)
+    (WEB / 'manifest.json').write_text(json.dumps({'version': version, 'files': manifest}, indent=2) + '\n',
+                                       encoding='utf-8')
 
     zpath = out.parent / (out.name + '.zip')
     with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as z:

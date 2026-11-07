@@ -18,6 +18,12 @@ More screenshots: [Screenshots](#screenshots).
 The patch is a set of small **xdelta** files that you apply to files from **your own copy** of the game. No game
 data is included.
 
+> **New: [web patcher](https://irxd.github.io/shin-musou-gundam-vita-english/) (experimental).** Instead of
+> Delta Patcher, you can apply the patch in your browser: choose your decrypted `eboot.bin.elf`, `LINKDATA.B` and
+> `LINKDATA.C`, and it gives you the finished `rePatch` folder. Everything runs on your computer and nothing is
+> uploaded. You still need to get those three files from your Vita (steps 1 and 2 below). Desktop Chrome or Edge
+> is recommended. If it doesn't work for you, use the manual steps below.
+
 ### You need
 
 - **The game:** Shin Gundam Musou, Japanese release **PCSG00278**, version **1.00** or **1.02** (the latest
@@ -224,7 +230,8 @@ tools/build_sfo.py       English game name in param.sfo (experimental, not in th
 tools/unfself.py         decrypted SELF (FAGDec) -> ELF
 tools/g1t*.py, dxt.py    G1T texture decoding / DXT5 encoding
 tools/re/                reverse-engineering helpers for the eboot
-scripts/make_release.py  full build + xdelta release package
+scripts/make_release.py  full build + xdelta release package (+ the web patcher's patch files)
+docs/index.html          web patcher (GitHub Pages); docs/patcher/ has its VCDIFF decoder and zip writer
 ```
 
 ## Credits
