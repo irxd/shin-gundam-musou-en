@@ -197,3 +197,12 @@ scripts/make_release.py  full build + xdelta release package
 - Tools used: Vita3K, VitaShell, rePatch, FAGDec, xdelta3, capstone, keystone, Pillow
 
 This is an unofficial fan project and is not affiliated with Bandai Namco, Koei Tecmo or Sunrise.
+
+## License
+
+The code in this repository (tools and scripts) is released under the [MIT License](LICENSE).
+
+The license does not cover the games or anything taken from them. *Shin Gundam Musou* and *Dynasty Warriors:
+Gundam Reborn*, including their text, graphics and code, belong to their respective owners (©SOTSU・SUNRISE,
+Bandai Namco, Koei Tecmo). The release patches contain English text and images from the PS3 release and are
+meant only for use with a copy of the game you own.
