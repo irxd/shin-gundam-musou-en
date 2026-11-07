@@ -41,7 +41,7 @@ CODE = CAVE + 0x100
 
 NARROW_LOW = [11, 13, 14, 15, 16, 20]     # ‐ ‘ ’ “ ” …
 SPACE_IDX, SPACE_W = 99, 6                # ideographic space
-GAP = 2                                    # px: 1 left margin + 1 spacing
+GAP = 1                                    # px: 1 left margin (ink starts at x=1); tighter fit for English
 
 
 # ---------------------------------------------------------------- DXT5 alpha block encoder
@@ -102,6 +102,7 @@ def build_atlas(g1t, chars):
 # ---------------------------------------------------------------- code
 def asm(ks, src, addr):
     b, _ = ks.asm(src, addr)
+    assert b, f"keystone failed to assemble at {addr:#x}"
     return bytes(b)
 
 
@@ -152,7 +153,189 @@ def build_code():
     hook_b = asm(ks, 'ldr r3, [sp]\nadd r3, fp', HOOK_B)
     hook_c = asm(ks, f'bl #{cave_c_addr:#x}', HOOK_C)
     assert (len(hook_a), len(hook_b), len(hook_c)) == (6, 4, 4), (len(hook_a), len(hook_b), len(hook_c))
-    return [(HOOK_A, hook_a), (HOOK_B, hook_b), (HOOK_C, hook_c), (CODE, cave_a), (cave_c_addr, cave_c)]
+    patches = [(HOOK_A, hook_a), (HOOK_B, hook_b), (HOOK_C, hook_c), (CODE, cave_a), (cave_c_addr, cave_c)]
+    return patches, (cave_c_addr + len(cave_c) + 3) & ~3
+
+
+# ---------------------------------------------------------------- line wrapping / spaces / measuring
+# Pre-pass line breaker 0x811d217c copies text into a buffer and inserts '\n' when the running width
+# (fixed `size` per char) exceeds the box width. Render loop 0x811d1b1e advances spaces by `size`.
+# Measure function 0x811d1f3a adds `size` per char. All three get real ASCII widths, and the
+# breaker gets word wrap (break at the last space on the line; original behaviour as fallback).
+WRAP_ENTRY = 0x811d2188      # strd r3, r4, [sp, #0x48]
+WRAP_WIDTH = 0x811d2210      # ldr.w r2, [sl, #0x44]
+WRAP_OVF = 0x811d22b0        # mov r0, sl ; bl kinsoku ; ...  (overflow branch)
+WRAP_EMIT = 0x811d2270       # emit current char (reloads it from [sp,#4])
+WRAP_NEXT = 0x811d21e6       # loop continue (next char)
+KINSOKU = 0x811d1270
+RENDER_SPACE = 0x811d1c6e    # ldr.w r6, [r8, #0x44]
+MEASURE_ASCII = 0x811d1ff8   # ldr.w lr, [r8, #0x44] ; add sb, lr
+MEASURE_NEXT = 0x811d1fb6
+BUF_SLOT = 0x50              # unused stack slot in the breaker's frame
+# Text boxes (e.g. tutorials) draw each wrapped line with a per-line char cap
+# [state+0x58] = box_width / size (0x811d23b0: bl divide), i.e. 20 chars. Proportional lines hold more,
+# so the cap is replaced by a constant and width-based wrapping alone decides line length.
+LINE_CAP = 0x811d23b0        # bl #0x8130b444 (divide) -> movs r0, #255 ; nop
+EXPECT_WRAP = {WRAP_ENTRY: 'cde91234', WRAP_WIDTH: 'daf84420', WRAP_OVF: '5046fef7ddff0028',
+               RENDER_SPACE: 'd8f84460', MEASURE_ASCII: 'd8f844e0f144', LINE_CAP: '39f148f8'}
+
+
+def ascii_widths(chars, widths):
+    """Width (in 20px cell units) of each printable ASCII char after the game's full-width mapping."""
+    idx = {c: i for i, c in enumerate(chars)}
+    out = bytearray()
+    for c in range(0x20, 0x7f):
+        g = {0x20: '　', 0x22: '”', 0x27: '’'}.get(c, chr(0xFEE0 + c))
+        out.append(widths.get(idx.get(g, -1), CELL))
+    return bytes(out)
+
+
+def build_wrap_code(base, ascii_tab):
+    ks = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
+    lo16 = lambda v: v & 0xffff
+    hi16 = lambda v: v >> 16
+    tab = base
+    pos = (base + len(ascii_tab) + 3) & ~3
+    out = [(tab, ascii_tab)]
+
+    def place(src):
+        nonlocal pos
+        code = asm(ks, src, pos)
+        out.append((pos, code)); addr = pos
+        pos = (pos + len(code) + 3) & ~3
+        return addr
+
+    # asciiw: r0 = char, r1 = size -> r0 = scaled width (size for non-ASCII). clobbers ip.
+    asciiw = place(f"""
+        sub ip, r0, #0x20
+        cmp ip, #95
+        bhs notascii
+        movw r0, #{lo16(tab)}
+        movt r0, #{hi16(tab)}
+        ldrb.w r0, [r0, ip]
+        mul r0, r1, r0
+        movw ip, #3277
+        mul r0, r0, ip
+        lsrs r0, r0, #16
+        bx lr
+    notascii:
+        mov r0, r1
+        bx lr
+    """)
+    entry = place(f"""
+        strd r3, r4, [sp, #0x48]
+        str r1, [sp, #{BUF_SLOT}]
+        bx lr
+    """)
+    # breaker char width: r1 = char (keep), r0 live (keep) -> r2
+    width = place(f"""
+        push {{r0, r1, lr}}
+        mov r0, r1
+        ldr.w r1, [sl, #0x44]
+        bl #{asciiw:#x}
+        mov r2, r0
+        pop {{r0, r1, pc}}
+    """)
+    # overflow: word wrap. state: r6 = out ptr (current char not written yet), r8 = width incl. char,
+    # sb = line count, [sp,#4] = char, [sp,#BUF_SLOT] = buffer start. r0-r3, ip, lr are free.
+    ovf = place(f"""
+        ldr r0, [sp, #4]
+        cmp r0, #0x20
+        bne scan
+        movs r0, #0x0a
+        strb r0, [r6], #1
+        mov.w r8, #0
+        add.w sb, sb, #1
+        b.w #{WRAP_NEXT:#x}
+    scan:
+        ldr r2, [sp, #{BUF_SLOT}]
+        mov r3, r6
+    back:
+        cmp r3, r2
+        bls fallback
+        ldrb r0, [r3, #-1]!
+        cmp r0, #0x0a
+        beq fallback
+        cmp r0, #0x20
+        bne back
+        movs r0, #0x0a
+        strb r0, [r3], #1
+        add.w sb, sb, #1
+        mov.w r8, #0
+    tail:
+        cmp r3, r6
+        bhs tail_done
+        ldrb r0, [r3], #1
+        cmp r0, #0x1b
+        bne not_esc
+        ldrb r0, [r3]
+        adds r3, #1
+        cmp r0, #0x43
+        bne tail
+        adds r3, #1
+        b tail
+    not_esc:
+        cmp r0, #0x80
+        blo tail_ascii
+        cmp r0, #0xc0
+        blo tail
+        ldr.w r0, [sl, #0x44]
+        add r8, r0
+        b tail
+    tail_ascii:
+        ldr.w r1, [sl, #0x44]
+        bl #{asciiw:#x}
+        add r8, r0
+        b tail
+    tail_done:
+        ldr r0, [sp, #4]
+        ldr.w r1, [sl, #0x44]
+        bl #{asciiw:#x}
+        add r8, r0
+        b.w #{WRAP_EMIT:#x}
+    fallback:
+        mov r0, sl
+        ldr r1, [sp, #4]
+        bl #{KINSOKU:#x}
+        cmp r0, #0
+        bne do_break
+        b.w #{WRAP_EMIT:#x}
+    do_break:
+        movs r0, #0x0a
+        strb r0, [r6], #1
+        ldr r0, [sp, #4]
+        ldr.w r1, [sl, #0x44]
+        bl #{asciiw:#x}
+        mov r8, r0
+        add.w sb, sb, #1
+        b.w #{WRAP_EMIT:#x}
+    """)
+    space = place(f"""
+        push {{r0, r1, lr}}
+        movs r0, #0x20
+        ldr.w r1, [r8, #0x44]
+        bl #{asciiw:#x}
+        mov r6, r0
+        pop {{r0, r1, pc}}
+    """)
+    measure = place(f"""
+        push {{lr}}
+        mov r0, r2
+        ldr.w r1, [r8, #0x44]
+        bl #{asciiw:#x}
+        add sb, r0
+        pop {{pc}}
+    """)
+    hooks = [
+        (WRAP_ENTRY, asm(ks, f'bl #{entry:#x}', WRAP_ENTRY)),
+        (WRAP_WIDTH, asm(ks, f'bl #{width:#x}', WRAP_WIDTH)),
+        (WRAP_OVF, asm(ks, f'b.w #{ovf:#x}', WRAP_OVF)),
+        (RENDER_SPACE, asm(ks, f'bl #{space:#x}', RENDER_SPACE)),
+        (MEASURE_ASCII, asm(ks, f'bl #{measure:#x}', MEASURE_ASCII) + asm(ks, f'b #{MEASURE_NEXT:#x}', MEASURE_ASCII + 4)),
+        (LINE_CAP, asm(ks, 'movs r0, #255; nop', LINE_CAP)),
+    ]
+    assert [len(b) for _, b in hooks] == [4, 4, 4, 4, 6, 4], [len(b) for _, b in hooks]
+    return hooks + out, pos
 
 
 # ---------------------------------------------------------------- ELF
@@ -190,7 +373,7 @@ def main():
     vita_c, elf_path, self_auth, out_dir = sys.argv[1:5]
     elf = open(elf_path, 'rb').read()
     seg_off = lambda va: 0xa0 + va - SEG0
-    for va, hx in EXPECT.items():
+    for va, hx in {**EXPECT, **EXPECT_WRAP}.items():
         got = elf[seg_off(va):seg_off(va) + len(hx) // 2].hex()
         assert got == hx, f'unexpected bytes at {va:#x}: {got} (wrong eboot version?)'
 
@@ -205,7 +388,9 @@ def main():
     for i, w in widths.items():
         if i < LO_N: tab_lo[i] = w
         elif HI_FIRST <= i < HI_FIRST + HI_N: tab_hi[i - HI_FIRST] = w
-    patches = [(TAB_LO, bytes(tab_lo)), (TAB_HI, bytes(tab_hi))] + build_code()
+    glyph_patches, free = build_code()
+    wrap_patches, free = build_wrap_code(free, ascii_widths(chars, widths))
+    patches = [(TAB_LO, bytes(tab_lo)), (TAB_HI, bytes(tab_hi))] + glyph_patches + wrap_patches
 
     # LINKDATA.C: copy + overwrite the font entry in place (same size)
     out_c = os.path.join(out_dir, 'LINKDATA_NGP', 'LINKDATA.C')
