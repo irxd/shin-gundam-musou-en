@@ -16,7 +16,7 @@
 Usage: build_font.py <vita LINKDATA.C> <decrypted eboot.bin.elf> <self_auth.bin> <out dir>
        out dir receives LINKDATA_NGP/LINKDATA.C, eboot.bin, eboot.bin.elf
 """
-import sys, os, struct, shutil
+import json, sys, os, struct, shutil
 sys.stdout.reconfigure(encoding="utf-8")
 sys.path.insert(0, os.path.dirname(__file__))
 from PIL import Image
@@ -338,6 +338,47 @@ def build_wrap_code(base, ascii_tab):
     return hooks + out, pos
 
 
+# ---------------------------------------------------------------- per-string text scale
+# Box draw function 0x811d22ec(state r8, text r7, ..., box sb). At 0x811d2358 the box parameters have
+# just been applied to the font state, which the function saves/restores around the draw. A string
+# starting with ESC + chr(0x60 + s), 16 <= s <= 31, is drawn at s/32 size: glyph width (+0x44), height
+# (+0x48) and line spacing (+0x50) are scaled. ESC + any letter except 'C' is a 2-byte no-op for the
+# renderer, measurer and line breaker, so the marker itself is invisible. build_text.py adds it to
+# strings that need more lines than their box holds.
+FIT_HOOK, FIT_RET = 0x811d2358, 0x811d235c      # ldr.w r0, [sb, #0x30]
+SCALE_BASE, SCALE_MIN, SCALE_MAX = 0x60, 16, 31
+EXPECT_FIT = {FIT_HOOK: 'd9f83000'}
+
+
+def build_fit_code(base):
+    ks = Ks(KS_ARCH_ARM, KS_MODE_THUMB)
+    scale = lambda off: f"""
+        ldr.w r0, [r8, #{off:#x}]
+        muls r0, r1, r0
+        asrs r0, r0, #5
+        str.w r0, [r8, #{off:#x}]"""
+    code = asm(ks, f"""
+        ldrb r0, [r7]
+        cmp r0, #0x1b
+        bne done
+        ldrb r1, [r7, #1]
+        subs r1, #{SCALE_BASE}
+        cmp r1, #{SCALE_MIN}
+        blo done
+        cmp r1, #{SCALE_MAX}
+        bhi done
+        {scale(0x44)}
+        {scale(0x48)}
+        {scale(0x50)}
+    done:
+        ldr.w r0, [sb, #0x30]
+        b.w #{FIT_RET:#x}
+    """, base)
+    hook = asm(ks, f'b.w #{base:#x}', FIT_HOOK)
+    assert len(hook) == 4
+    return [(FIT_HOOK, hook), (base, code)], (base + len(code) + 3) & ~3
+
+
 # ---------------------------------------------------------------- ELF
 def patch_elf(elf: bytes, patches):
     """Apply (va, bytes) patches to segment 0, growing segment 0 into the gap before segment 1."""
@@ -373,7 +414,7 @@ def main():
     vita_c, elf_path, self_auth, out_dir = sys.argv[1:5]
     elf = open(elf_path, 'rb').read()
     seg_off = lambda va: 0xa0 + va - SEG0
-    for va, hx in {**EXPECT, **EXPECT_WRAP}.items():
+    for va, hx in {**EXPECT, **EXPECT_WRAP, **EXPECT_FIT}.items():
         got = elf[seg_off(va):seg_off(va) + len(hx) // 2].hex()
         assert got == hx, f'unexpected bytes at {va:#x}: {got} (wrong eboot version?)'
 
@@ -390,7 +431,8 @@ def main():
         elif HI_FIRST <= i < HI_FIRST + HI_N: tab_hi[i - HI_FIRST] = w
     glyph_patches, free = build_code()
     wrap_patches, free = build_wrap_code(free, ascii_widths(chars, widths))
-    patches = [(TAB_LO, bytes(tab_lo)), (TAB_HI, bytes(tab_hi))] + glyph_patches + wrap_patches
+    fit_patches, free = build_fit_code(free)
+    patches = [(TAB_LO, bytes(tab_lo)), (TAB_HI, bytes(tab_hi))] + glyph_patches + wrap_patches + fit_patches
 
     # LINKDATA.C: copy + overwrite the font entry in place (same size)
     out_c = os.path.join(out_dir, 'LINKDATA_NGP', 'LINKDATA.C')
@@ -404,6 +446,11 @@ def main():
     open(os.path.join(out_dir, 'eboot.bin.elf'), 'wb').write(new_elf)
     fself = make_fself(new_elf, authid=authid_from_self_auth(self_auth), compress=True)
     open(os.path.join(out_dir, 'eboot.bin'), 'wb').write(fself)
+
+    # ASCII advance widths for build_text.py's pre-wrapping -> build/ascii_widths.json
+    aw = ascii_widths(chars, widths)
+    wpath = os.path.join(os.path.dirname(os.path.dirname(os.path.normpath(out_dir))), 'ascii_widths.json')
+    json.dump({chr(0x20 + i): aw[i] for i in range(len(aw))}, open(wpath, 'w'), indent=0)
 
     print('glyph widths set:', len(widths), {chars[i]: widths[i] for i in sorted(widths)[:10]})
     for va, b in patches:

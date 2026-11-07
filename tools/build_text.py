@@ -9,6 +9,29 @@ import argparse, struct, sys, collections
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from linkdata import LinkData, write_linkdata
+from textwrap_vita import Metrics, fixup, box_of
+
+METRICS = None    # set in main(); None disables wrapping
+
+
+def english(tp, tv, st, box=None):
+    """Final English bytes for one string: font fixups + pre-wrap for boxes that need it.
+    tp: PS3 English bytes, tv: Vita Japanese bytes it replaces, box: (width limit, max lines) or None."""
+    try:
+        s = fixup(tp.decode('utf-8'))
+    except UnicodeDecodeError:      # binary data that happens to look like a string table
+        return tp
+    if METRICS and box:
+        ja = tv.decode('utf-8', 'replace')
+        lim, lines = box
+        if '\n' in ja or METRICS.width(ja, 5.0) <= lim:      # shown in that box (not a one-line view)
+            w, sc = METRICS.fit(s, lim, lines)
+            if w != s:
+                st['wrap: strings re-wrapped'] += 1
+            if sc < 32:
+                st[f'wrap: shrunk to {sc}/32'] += 1
+            s = w
+    return s.encode('utf-8')
 
 PS3_SHIFT_FROM, PS3_SHIFT = 112, 2
 
@@ -115,7 +138,7 @@ def port_table(dv, dp, st):
     recs, n = [], 0
     for rv, rp in zip(tv[1], tp[1]):
         if rp.strip(b'\0') and rp != rv:   # PS3 has real text here
-            recs.append(rp); n += 1
+            recs.append(fixup(rp.decode('utf-8')).encode('utf-8')); n += 1
         else:                              # PS3 placeholder/empty: keep Vita original
             recs.append(rv)
             if rv.strip(b'\0') and not rp.strip(b'\0'):
@@ -132,7 +155,8 @@ def port_node(dv, dp, st, skipped, path):
             st['strtab: count mismatch (skipped)'] += 1; skipped.append((path, len(tv), len(tp)))
             return None
         st['strtab: replaced'] += 1; st['strings replaced'] += len(tp)
-        return build_strtab(tp)
+        box = box_of(METRICS, [x.decode('utf-8', 'replace') for x in tv]) if METRICS else None
+        return build_strtab([english(p, v, st, box) for v, p in zip(tv, tp)])
     vs, ps = parse_sections(dv, '<'), parse_sections(dp, '>')
     if not vs or not ps or len(vs) != len(ps):
         return None
@@ -148,11 +172,59 @@ def port_node(dv, dp, st, skipped, path):
     return out
 
 
+STORY_ENTRY = 171    # story/event scripts (see tools/story.py)
+
+
+def port_story(dv, dp, st):
+    """Replace each scene's line records with the PS3 ones (matched by line index + id)."""
+    from story import parse_c, build_c, scene_lines, build_record
+    iv, ip = parse_c(dv, '<'), parse_c(dp, '>')
+    if not iv or not ip or len(iv) != len(ip):
+        st['story: container mismatch (skipped)'] += 1
+        return None
+    boxes = {}
+    if METRICS:    # one box size per text-section kind (dialogue / narration), from all scenes
+        ja = collections.defaultdict(list)
+        for a in iv:
+            sa = scene_lines(a, '<')
+            for t, lines in (sa[1].items() if sa else ()):
+                ja[t] += [x[2].decode('utf-8', 'replace') for x in lines]
+        boxes = {t: box_of(METRICS, v) for t, v in ja.items()}
+        print('story boxes (width units, max lines):', boxes)
+    out = []
+    for a, b in zip(iv, ip):
+        sa, sb = scene_lines(a, '<'), scene_lines(b, '>')
+        if not sa or not sb:
+            if sa: st['story: scene kept (no PS3 match)'] += 1
+            out.append(a)
+            continue
+        secs, changed = list(sa[0]), False
+        for t, lines_v in sa[1].items():
+            lines_p = sb[1].get(t)
+            if lines_p is None or [(x[0], x[1]) for x in lines_v] != [(x[0], x[1]) for x in lines_p]:
+                st['story: text section kept (line mismatch)'] += 1
+                continue
+            secs[t] = build_c([build_record(idx, lid, english(text, tv, st, boxes.get(t)))
+                               for (idx, lid, text), (_, _, tv) in zip(lines_p, lines_v)])
+            changed = True
+            st['story: text sections replaced'] += 1
+            st['story: lines replaced'] += len(lines_p)
+        out.append(build_c(secs) if changed else a)
+    return build_c(out)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('vita_b'); ap.add_argument('ps3_b'); ap.add_argument('out')
     ap.add_argument('--only', type=int, nargs='*', help='only patch these Vita entry indices')
+    ap.add_argument('--widths', default=str(Path(__file__).parent.parent / 'build' / 'ascii_widths.json'),
+                    help='ASCII glyph widths written by build_font.py (wrapping is skipped if missing)')
     a = ap.parse_args()
+    global METRICS
+    if Path(a.widths).exists():
+        METRICS = Metrics(a.widths)
+    else:
+        print('warning: no', a.widths, '- run build_font.py first; text will not be pre-wrapped')
 
     v, p = LinkData(a.vita_b), LinkData(a.ps3_b)
     blobs = [v.read(i) for i in range(len(v))]
@@ -161,6 +233,11 @@ def main():
         if a.only and i not in a.only:
             continue
         dp = p.read(i + PS3_SHIFT)
+        if i == STORY_ENTRY:
+            new = port_story(blobs[i], dp, st)
+            if new is not None:
+                blobs[i] = new; st['entry: story patched'] += 1
+            continue
         if parse_table(blobs[i], '<'):
             new = port_table(blobs[i], dp, st)
             if new is not None:
