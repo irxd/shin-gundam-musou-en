@@ -24,6 +24,8 @@ SPRITES = [
     (2611, 0, (440, 118, 536, 166), 2612, 0, (779, 358, 874, 406)),   # いいえ         <- NO (grey)
 ]
 
+# whole textures replaced by the downscaled PS3 texture: (vita entry, texture, ps3 entry, texture)
+WHOLE = [(i, 0, i, 0) for i in range(289, 321)]     # chapter title cards (第1話 ... / PHASE-01 ... / episode1 ...)
 
 SCALE = 0.72     # PS3 -> Vita sprite scale (same for all, so letter heights match); squeeze if too wide
 
@@ -65,13 +67,38 @@ def main():
                 for bx in range(vbox[0] // 4, (vbox[2] + 3) // 4):
                     blk = [px[bx * 4 + i % 4, by * 4 + i // 4] for i in range(16)]
                     lin[(by * bw + bx) * 16:(by * bw + bx + 1) * 16] = encode_dxt5_block(blk)
-        nd = bytearray(d)
-        nd[start:start + n] = swizzle_blocks(bytes(lin), t['w'], t['h'], 16)
-        off, size = o.entries[ve]
-        assert len(nd) == size
-        f.seek(off * o.align); f.write(nd)
+        write_tex(f, o, ve, d, t, lin)
         print(f'C[{ve}] tex {vt}: {len(items)} sprites replaced')
+    for ve, vt, pe, pt in WHOLE:
+        d = o.read(ve)
+        t = parse_g1t(d)['textures'][vt]
+        assert t['fmt'] == 0x12
+        pd = p.read(pe)
+        src = decode_tex(pd, parse_g1t(pd)['textures'][pt])
+        img = src.convert('RGBa').resize((t['w'], t['h']), Image.LANCZOS).convert('RGBA')
+        write_tex(f, o, ve, d, t, encode_image(img))
+    print(f'{len(WHOLE)} whole textures replaced')
     f.close()
+
+
+def encode_image(img):
+    """RGBA image -> linear (row-major) DXT5 blocks."""
+    px = img.load()
+    out = bytearray()
+    for by in range(img.height // 4):
+        for bx in range(img.width // 4):
+            out += encode_dxt5_block([px[bx * 4 + i % 4, by * 4 + i // 4] for i in range(16)])
+    return out
+
+
+def write_tex(f, o, entry, d, t, lin):
+    start, n = data_start(d, t), tex_size(t)
+    assert len(lin) == n
+    nd = bytearray(d)
+    nd[start:start + n] = swizzle_blocks(bytes(lin), t['w'], t['h'], 16)
+    off, size = o.entries[entry]
+    assert len(nd) == size
+    f.seek(off * o.align); f.write(nd)
 
 
 if __name__ == '__main__':

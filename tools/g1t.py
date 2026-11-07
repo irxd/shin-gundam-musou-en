@@ -14,6 +14,9 @@ def parse_g1t(d):
         p = toff + o
         if p + 8 > len(d): return None
         b0, fmt, dims, b3 = d[p], d[p + 1], d[p + 2], d[p + 3]
-        texs.append(dict(off=p, mips=b0 >> 4, fmt=fmt, w=1 << (dims & 0xf), h=1 << (dims >> 4), b3=b3,
+        lo, hi = dims & 0xf, dims >> 4
+        if e == '>':      # PS3 stores the size nibbles the other way round
+            lo, hi = hi, lo
+        texs.append(dict(off=p, mips=b0 >> 4, fmt=fmt, w=1 << lo, h=1 << hi, b3=b3,
                          hdr=d[p:p + 8].hex()))
     return dict(endian=e, version=ver, size=fsize, platform=plat, textures=texs)
