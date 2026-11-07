@@ -78,7 +78,83 @@ def main():
         img = src.convert('RGBa').resize((t['w'], t['h']), Image.LANCZOS).convert('RGBA')
         write_tex(f, o, ve, d, t, encode_image(img))
     print(f'{len(WHOLE)} whole textures replaced')
+    # boot logo (RGBA8): PS3 1280x720 area -> Vita 960x544 area
+    d = o.read(KT_LOGO); t = parse_g1t(d)['textures'][0]
+    pd = p.read(KT_LOGO); pt = parse_g1t(pd)['textures'][0]
+    logo = fix_company_name(read_rgba(pd, pt).crop((0, 0, 1280, 720))).resize((960, 544), Image.LANCZOS)
+    img = read_rgba(d, t); img.paste(logo, (0, 0))
+    write_rgba(f, o, KT_LOGO, d, t, img)
+    # anti-piracy notice: not translated in the PS3 EU release, so redraw it in English
+    d = o.read(NOTICE); t = parse_g1t(d)['textures'][0]
+    write_rgba(f, o, NOTICE, d, t, draw_notice(read_rgba(d, t)))
+    print('boot logo + notice replaced')
     f.close()
+
+
+KT_LOGO = 35       # "コーエーテクモゲームス" logo -> PS3 logo, words reordered to "KOEI TECMO GAMES"
+NOTICE = 32        # ご注意 (copyright notice), drawn at 1280x720 inside a 2048x1024 RGBA texture
+NOTICE_TITLE = 'Notice'
+NOTICE_TEXT = [
+    'Distributing or transmitting this game software over the internet without the permission of '
+    'the rights holder, or downloading it while knowing that it was distributed illegally, '
+    'is strictly prohibited by law.',
+    'Thank you for your understanding and cooperation.',
+]
+FONT_DIR = Path('C:/Windows/Fonts')
+
+
+def fix_company_name(img):
+    """The EU logo reads "TECMO KOEI GAMES"; reorder the word images to "KOEI TECMO GAMES"."""
+    y0, y1 = 495, 549                                             # text line (ink at rows 501-542)
+    tecmo, koei, games = (360, 557), (580, 699), (722, 920)       # word columns
+    gap = koei[0] - tecmo[1]
+    cut = lambda w: img.crop((w[0], y0, w[1], y1))
+    parts = [cut(koei), cut(tecmo), cut(games)]
+    total = sum(p.width for p in parts) + gap * 2
+    out = img.copy()
+    out.paste(img.getpixel((10, y0)), (tecmo[0] - 4, y0, games[1] + 4, y1))   # clear the line
+    x = (tecmo[0] + games[1] - total) // 2
+    for part in parts:
+        out.paste(part, (x, y0)); x += part.width + gap
+    return out
+
+
+def read_rgba(d, t):
+    """Uncompressed G1T texture (fmt 0): Vita bytes are RGBA, PS3 bytes are ABGR."""
+    vita = d[:4] == b'GT1G'
+    s = data_start(d, t, '<' if vita else '>')
+    raw = d[s:s + t['w'] * t['h'] * 4]
+    return Image.frombytes('RGBA', (t['w'], t['h']), raw, 'raw', 'RGBA' if vita else 'ABGR')
+
+
+def write_rgba(f, o, entry, d, t, img):
+    s = data_start(d, t)
+    nd = bytearray(d)
+    nd[s:s + t['w'] * t['h'] * 4] = img.tobytes('raw', 'RGBA')
+    off, size = o.entries[entry]
+    assert len(nd) == size
+    f.seek(off * o.align); f.write(nd)
+
+
+def draw_notice(img):
+    from PIL import ImageDraw, ImageFont
+    dr = ImageDraw.Draw(img)
+    dr.rectangle((240, 96, 1038, 640), fill=(239, 239, 239, 255))          # clear the Japanese text
+    title = ImageFont.truetype(str(FONT_DIR / 'segoeuib.ttf'), 46)
+    body = ImageFont.truetype(str(FONT_DIR / 'seguisb.ttf'), 33)
+    dr.text((640, 140), NOTICE_TITLE, font=title, fill=(206, 65, 33, 255), anchor='mm')
+    left, right, y, pitch = 288, 1000, 200, 47
+    for para in NOTICE_TEXT:
+        line = ''
+        for word in para.split():
+            t = (line + ' ' + word).strip()
+            if dr.textlength(t, font=body) > right - left and line:
+                dr.text((left, y), line, font=body, fill=(102, 102, 102, 255)); y += pitch; line = word
+            else:
+                line = t
+        dr.text((left, y), line, font=body, fill=(102, 102, 102, 255)); y += pitch + 16
+    assert y < 660, 'notice text does not fit the panel'
+    return img
 
 
 def encode_image(img):
