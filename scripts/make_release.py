@@ -11,7 +11,7 @@ Needs xdelta3 (tools/bin/xdelta3.exe or on PATH) and these local inputs:
     decrypted/vita/param.sfo.orig, param_102.sfo.orig     original sce_sys/param.sfo of the game / of the update
     decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/LINKDATA.B, LINKDATA.C   PS3 EU source of the English text/images
 
-Output: release/shin-gundam-musou-vita-english-<version>/  (+ .zip)
+Output: release/shin-gundam-musou-en-<version>/  (+ .zip)
         docs/patcher/patches/  (the same patches + manifest.json, for the web patcher on GitHub Pages)
 """
 import hashlib, json, os, shutil, subprocess, sys, zipfile
@@ -76,7 +76,7 @@ def main():
     py('build_text.py', VITA / 'LINKDATA.B', PS3 / 'LINKDATA.B', BUILD / 'LINKDATA_NGP/LINKDATA.B')
 
     # 2. xdelta: original -> patched
-    out = ROOT / 'release' / f'shin-gundam-musou-vita-english-{version}'
+    out = ROOT / 'release' / f'shin-gundam-musou-en-{version}'
     if out.exists():
         shutil.rmtree(out)
     (out / 'patches').mkdir(parents=True)
