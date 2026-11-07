@@ -22,6 +22,8 @@ SPRITES = [
     (2611, 0, (226, 118, 311, 162), 2612, 0, (770, 293, 869, 347)),   # 確認 selected  <- OK (red)
     (2611, 0, (330, 118, 426, 162), 2612, 0, (627, 351, 726, 405)),   # いいえ selected <- NO (red)
     (2611, 0, (440, 118, 536, 166), 2612, 0, (779, 358, 874, 406)),   # いいえ         <- NO (grey)
+    # title screen (atlas C[2629] <-> PS3 C[2630]); last value: own scale instead of SCALE
+    (2629, 0, (198, 84, 404, 122), 2630, 0, (136, 82, 385, 119), 1.0),  # ©創通・サンライズ <- ©SOTSU・SUNRISE
 ]
 
 # whole textures replaced by the downscaled PS3 texture: (vita entry, texture, ps3 entry, texture)
@@ -30,9 +32,9 @@ WHOLE = [(i, 0, i, 0) for i in range(289, 321)]     # chapter title cards (第1�
 SCALE = 0.72     # PS3 -> Vita sprite scale (same for all, so letter heights match); squeeze if too wide
 
 
-def fit(sprite, box):
+def fit(sprite, box, scale=SCALE):
     w, h = box[2] - box[0], box[3] - box[1]
-    sy = min(SCALE, h / sprite.height)
+    sy = min(scale, h / sprite.height)
     sx = min(sy, w / sprite.width)
     size = (max(1, round(sprite.width * sx)), max(1, round(sprite.height * sy)))
     return sprite.convert('RGBa').resize(size, Image.LANCZOS).convert('RGBA')
@@ -42,18 +44,18 @@ def main():
     ps3_c, out_c = sys.argv[1:3]
     p, o = LinkData(ps3_c), LinkData(out_c)
     by_tex = {}
-    for ve, vt, vbox, pe, pt, pbox in SPRITES:
-        by_tex.setdefault((ve, vt), []).append((vbox, pe, pt, pbox))
+    for ve, vt, vbox, pe, pt, pbox, *scale in SPRITES:
+        by_tex.setdefault((ve, vt), []).append((vbox, pe, pt, pbox, *scale))
     f = open(out_c, 'r+b')
     for (ve, vt), items in by_tex.items():
         d = o.read(ve)
         t = parse_g1t(d)['textures'][vt]
         assert t['fmt'] == 0x12, 'only DXT5 Vita textures supported'
         img = decode_tex(d, t)
-        for vbox, pe, pt, pbox in items:
+        for vbox, pe, pt, pbox, *scale in items:
             pd = p.read(pe)
             src = decode_tex(pd, parse_g1t(pd)['textures'][pt]).crop(pbox)
-            src = fit(src, vbox)
+            src = fit(src, vbox, *scale)
             img.paste((0, 0, 0, 0), vbox)
             cx, cy = (vbox[0] + vbox[2] - src.width) // 2, (vbox[1] + vbox[3] - src.height) // 2
             img.alpha_composite(src, (cx, cy))
