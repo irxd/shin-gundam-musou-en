@@ -5,7 +5,7 @@ A section is a string table when: u32 n, (u32 off, u32 len) * n, strings start a
 contiguous. Matching string tables (same n) are replaced with the PS3 strings (converted to LE).
 All other data (script bytecode etc.) stays Vita-original.
 """
-import argparse, struct, sys, collections
+import argparse, re, struct, sys, collections
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from linkdata import LinkData, write_linkdata
@@ -27,7 +27,8 @@ def english(tp, tv, st, box=None, table=False):
     except UnicodeDecodeError:      # binary data that happens to look like a string table
         return tp
     if table:
-        s = LABEL_OVERRIDES.get(s, s)
+        s = TABLE_OVERRIDES.get(s, s)
+    check_format(s, tv)
     if METRICS and box:
         ja = tv.decode('utf-8', 'replace')
         lim, lines = box
@@ -43,6 +44,22 @@ def english(tp, tv, st, box=None, table=False):
                 st[f'wrap: shrunk to {sc}/32'] += 1
             s = w
     return s.encode('utf-8')
+
+PRINTF = re.compile(r'%[-+ #0]*\d*(?:\.\d+)?(?:hh|h|ll|l)?[diouxXcsfFeEgGp]')
+
+
+def check_format(s, tv):
+    """Some strings are printf formats filled in by the Vita eboot (e.g. '[g]%s[/] x%d'). The English must
+    use the same conversions in the same order, or the game reads an int as a char* and crashes. Any other
+    '%' in a format must be '%%'."""
+    ja = tv.decode('utf-8', 'replace')
+    want = PRINTF.findall(ja)
+    if not want:
+        return
+    if PRINTF.findall(s) != want or '%' in PRINTF.sub('', s).replace('%%', ''):
+        raise ValueError(f'printf format mismatch, add an entry to TABLE_OVERRIDES:\n'
+                         f'  Japanese: {ja!r}\n  English:  {s!r}')
+
 
 PS3_SHIFT_FROM, PS3_SHIFT = 112, 2
 
@@ -139,9 +156,23 @@ def build_table(tid, recs, e='<'):
     return out
 
 
-# Short labels (whole table records) that are too wide for their Vita slot: exact PS3 text -> replacement.
-LABEL_OVERRIDES = {
+# Whole table records replaced by exact PS3 text -> new text.
+TABLE_OVERRIDES = {
+    # short labels too wide for their Vita slot
     'Regular Network Connection': 'Network Connection',     # Options label; auto-shrunk to unreadable
+    # printf formats whose PS3 text has the arguments in another order than the Vita eboot passes them
+    # (Japanese: name %s first, then count %d). Swapped order crashed the game on the reward popup.
+    '[g]%d[/] of material item [g]%s[/] obtained.':
+        'Material item [g]%s[/] x[g]%d[/] obtained.',
+    '[g]%d[/] of material item [g]%s[/] obtained!':
+        'Material item [g]%s[/]\nx[g]%d[/] obtained!',
+    'Play [g]%d or more[/] times in [g]%s[/]':
+        'In [g]%s[/], play [g]%d or more[/] times',
+    'Play [g]%d or more[/] times with [g]%s[/]':
+        'With [g]%s[/], sortie [g]%d or more[/] times',
+    # a bare '%' in a printf format is undefined; it must be '%%'
+    'Unlock [g]%d %[/] of Famous Scenes': 'Unlock [g]%d%%[/] of Famous Scenes',
+    'Reach [g]%d %[/] of the Card Collection': 'Reach [g]%d%%[/] of the Card Collection',
 }
 
 
