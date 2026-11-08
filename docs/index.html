@@ -130,10 +130,20 @@
 
   <section class="card" id="error-card" hidden><div class="msg" id="error" role="alert"></div></section>
 
+  <section class="card" id="partial" hidden>
+    <div class="msg">
+      <p style="color:var(--text)">Patching only <span id="partial-names"></span></p>
+      <p>Use this to update files you already patched, for example when a new version changes only one file.
+        The other patched files on your Vita must be from a version that works with this one: the
+        <a href="https://github.com/irxd/shin-gundam-musou-en/releases" target="_blank" rel="noopener" style="text-decoration:underline">release notes</a>
+        say which files changed. New install? Choose all three files.</p>
+    </div>
+  </section>
+
   <section class="card" id="done" hidden>
     <div class="msg">
-      <p style="color:var(--text)">Copy the <code>rePatch</code> folder to <code>ux0:</code> on your Vita<span id="unzip-hint"> (unzip it first)</span>:</p>
-      <p><code>ux0:rePatch/PCSG00278/eboot.bin</code><br><code>ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B</code><br><code>ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C</code></p>
+      <p style="color:var(--text)">Copy the <code>rePatch</code> folder to <code>ux0:</code> on your Vita<span id="unzip-hint"> (unzip it first)</span><span id="replace-hint">, replacing the old files</span>:</p>
+      <p id="done-files"></p>
       <p>Needs the rePatch plugin. Then start the game.</p>
     </div>
   </section>
@@ -142,7 +152,7 @@
     <div class="foot">
       <div class="info">
         <div class="t" id="status">Choose your files</div>
-        <div class="s" id="status-sub">Drop them here or tap a row above</div>
+        <div class="s" id="status-sub">All three, or only the ones to update</div>
       </div>
       <button class="btn" id="patch" type="button" disabled>
         <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Patch

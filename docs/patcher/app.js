@@ -4,6 +4,9 @@ import { makeZip, crc32 } from './zip.js';
 
 const $ = (s) => document.querySelector(s);
 const SLOTS = ['eboot', 'LINKDATA.B', 'LINKDATA.C'];
+const NAMES = { eboot: 'eboot.bin', 'LINKDATA.B': 'LINKDATA.B', 'LINKDATA.C': 'LINKDATA.C' };
+const readySlots = () => SLOTS.filter((k) => state.slots[k]?.ok);
+const listNames = (ks) => ks.map((k) => NAMES[k]).join(ks.length > 2 ? ', ' : ' and ');
 const state = { manifest: null, slots: {}, busy: false, done: false };
 const canPickFolder = 'showDirectoryPicker' in window;
 
@@ -72,18 +75,26 @@ function render() {
     } else { small.textContent = s.message; meta.textContent = 'Replace'; }
   }
   const zip = $('#zip').checked;
+  const picked = readySlots();
+  const checking = SLOTS.some((k) => state.slots[k]?.checking);
+  const ready = picked.length > 0 && !checking;
+  const partial = picked.length > 0 && picked.length < SLOTS.length;
+  const outSize = picked.reduce((n, k) => n + state.slots[k].entry.target.size, 0);
   $('#zip-note').textContent = !canPickFolder ? 'Saving to a folder needs Chrome or Edge'
-    : zip ? 'On: one ~1 GB zip to unzip yourself' : 'Off: save straight into a folder you pick';
+    : !zip ? 'Off: save straight into a folder you pick'
+      : `On: one ${picked.length ? `~${mb(outSize)} ` : ''}zip to unzip yourself`;
   $('#zip').disabled = state.busy || !canPickFolder;
   $('#unzip-hint').hidden = !zip;
+  $('#partial').hidden = !partial;
+  $('#partial-names').textContent = partial ? listNames(picked) + '.' : '';
 
-  const ready = SLOTS.every((k) => state.slots[k]?.ok);
   $('#patch').disabled = !ready || state.busy;
   if (!state.busy && !state.done) {
-    const n = SLOTS.filter((k) => state.slots[k]?.ok).length;
-    setStatus(ready ? 'Ready to patch' : n ? `${n} of 3 files ready` : 'Choose your files',
-      ready ? (zip ? 'Creates a zip with the rePatch folder' : 'You\'ll pick where to save it')
-        : 'Drop them here or tap a row above');
+    const where = zip ? 'Creates a zip with the rePatch folder' : 'You\'ll pick where to save it';
+    if (checking) setStatus('Checking files…', 'One moment');
+    else if (!picked.length) setStatus('Choose your files', 'All three, or only the ones to update');
+    else if (partial) setStatus(`Ready to patch ${picked.length} of 3 files`, where);
+    else setStatus('Ready to patch', where);
   }
 }
 
@@ -93,7 +104,13 @@ function setBar(f) { $('#bar').hidden = f == null; $('#bar i').style.width = `${
 async function run() {
   hideError();
   const mode = $('#zip').checked ? 'zip' : 'folder';
-  const jobs = SLOTS.map((k) => state.slots[k]);
+  const jobs = readySlots().map((k) => state.slots[k]);
+  $('#done-files').replaceChildren(...jobs.flatMap((j, i) => {
+    const c = document.createElement('code');
+    c.textContent = 'ux0:' + j.entry.target.path;
+    return i ? [document.createElement('br'), c] : [c];
+  }));
+  $('#replace-hint').hidden = jobs.length === SLOTS.length;
   const total = jobs.reduce((n, j) => n + j.entry.target.size, 0);
   let doneBefore = 0;
   state.busy = true; state.done = false;

@@ -72,6 +72,9 @@ First check which version you have: **1.00** (no update) or **1.02** (the update
 
    Everything runs in your browser; nothing is uploaded. If it doesn't work for you, use option B.
 
+   **Updating to a new version?** You can choose only the files that changed (the release notes say which).
+   Choose the original, unpatched files, as always, and replace those files in `ux0:rePatch/PCSG00278/`.
+
    **Option B: Delta Patcher** (manual)
    1. Download the latest `shin-gundam-musou-en-<version>.zip` from [Releases](https://github.com/irxd/shin-gundam-musou-en/releases) and unzip it.
    2. Apply each `.xdelta` file to its source file. For the eboot use `eboot_v1.00.xdelta` **or**
