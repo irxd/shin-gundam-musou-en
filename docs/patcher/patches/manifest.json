@@ -1,5 +1,5 @@
 {
-  "version": "0.2.0",
+  "version": "0.2.1",
   "files": [
     {
       "patch": "LINKDATA.B.xdelta",
@@ -12,7 +12,7 @@
       "target": {
         "path": "rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B",
         "size": 7565312,
-        "sha1": "d1684f183f1ddf72e6e9ed2c8061af2d227e8874"
+        "sha1": "a51e4ea6dcf7f3e99ca650674453800b381bd9d1"
       }
     },
     {
