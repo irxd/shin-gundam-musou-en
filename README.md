@@ -117,7 +117,7 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 
 - Some menu and table lines are still in Japanese: about 780 lines the PS3 release left blank, and 5 tables
   whose line counts differ between the two versions.
-- Some images with Japanese text remain, such as tutorial pictures.
+- Some images with Japanese text remain, such as parts of menu screens and one tutorial picture (the network menu, Japanese on PS3 too).
 - DLC (the extra scenarios and mobile suits) is not translated yet and hasn't been tested with the patch.
   The patch doesn't change any DLC files; DLC scenario text will most likely show in Japanese. Planned for a
   later version.
@@ -135,10 +135,10 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 | Story scenes & narration | ✅ 5,461 lines |
 | Video cutscene subtitles | ✅ 420 lines (42 cutscenes) |
 | Font | ✅ Proportional English text with word wrap; long lines shrink to fit their box |
-| Images: YES/NO/OK buttons, chapter title cards, boot notice & logo, title screen | ✅ |
+| Images: YES/NO/OK buttons, chapter title cards, boot notice & logo, title screen, tutorial pictures | ✅ |
 | Game name on the home screen | ⏳ Still Japanese (planned) |
 | ~780 lines the PS3 release left blank, 5 tables with different line counts | ⏳ Still Japanese |
-| Other images with Japanese text (e.g. tutorial pictures) | ⏳ To do |
+| Other images with Japanese text (e.g. parts of menu screens) | ⏳ To do |
 | DLC (16 extra scenarios, 4 extra mobile suits) | ⏳ Planned for a later version |
 
 ## Screenshots

@@ -29,6 +29,12 @@ SPRITES = [
 # whole textures replaced by the downscaled PS3 texture: (vita entry, texture, ps3 entry, texture)
 WHOLE = [(i, 0, i, 0) for i in range(289, 321)]     # chapter title cards (第1話 ... / PHASE-01 ... / episode1 ...)
 
+# tutorial pictures (Vita C[2631..2677] = PS3 [+1], 512x256 DXT5, same layout on both): the ones with Japanese
+# text. The PS3 picture's colours are used with the Vita alpha (some PS3 pictures fill the Vita's transparent
+# corners). 2674 (network menu) is still Japanese on PS3, the rest have no text.
+TUTORIAL = [2638, 2639, 2644, 2646, 2647, 2648, 2650, 2652, 2653, 2654, 2655, 2656, 2657, 2658, 2659, 2660,
+            2661, 2662, 2663, 2664, 2665, 2666, 2667, 2668, 2675, 2676, 2677]
+
 SCALE = 0.72     # PS3 -> Vita sprite scale (same for all, so letter heights match); squeeze if too wide
 
 
@@ -80,6 +86,14 @@ def main():
         img = src.convert('RGBa').resize((t['w'], t['h']), Image.LANCZOS).convert('RGBA')
         write_tex(f, o, ve, d, t, encode_image(img))
     print(f'{len(WHOLE)} whole textures replaced')
+    for ve in TUTORIAL:
+        d, pd = o.read(ve), p.read(ve + 1)
+        t, pt = parse_g1t(d)['textures'][0], parse_g1t(pd)['textures'][0]
+        assert t['fmt'] == 0x12 and (t['w'], t['h']) == (pt['w'], pt['h'])
+        img = decode_tex(pd, pt)
+        img.putalpha(decode_tex(d, t).getchannel('A'))
+        write_tex(f, o, ve, d, t, encode_image(img))
+    print(f'{len(TUTORIAL)} tutorial pictures replaced')
     # boot logo (RGBA8): PS3 1280x720 area -> Vita 960x544 area
     d = o.read(KT_LOGO); t = parse_g1t(d)['textures'][0]
     pd = p.read(KT_LOGO); pt = parse_g1t(pd)['textures'][0]
