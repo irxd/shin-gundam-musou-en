@@ -5,7 +5,7 @@ A section is a string table when: u32 n, (u32 off, u32 len) * n, strings start a
 contiguous. Matching string tables (same n) are replaced with the PS3 strings (converted to LE).
 All other data (script bytecode etc.) stays Vita-original.
 """
-import argparse, re, struct, sys, collections
+import argparse, math, re, struct, sys, collections
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from linkdata import LinkData, write_linkdata
@@ -31,13 +31,13 @@ def english(tp, tv, st, box=None, table=False):
     check_format(s, tv)
     if METRICS and box:
         ja = tv.decode('utf-8', 'replace')
-        lim, lines = box
+        lim, lines, grow = box if len(box) == 3 else (*box, True)
         if table:
             if '\n' not in ja and METRICS.width(ja, 5.0) < TABLE_SENTENCE:
                 return s.encode('utf-8')
             lim = max(lim, METRICS.line_width(ja, 5.0))
         if '\n' in ja or METRICS.width(ja, 5.0) <= lim:      # shown in that box (not a one-line view)
-            w, sc = METRICS.fit(s, lim, lines)
+            w, sc = METRICS.fit(s, lim, lines, grow)
             if w != s:
                 st['wrap: strings re-wrapped'] += 1
             if sc < 32:
@@ -173,7 +173,59 @@ TABLE_OVERRIDES = {
     # a bare '%' in a printf format is undefined; it must be '%%'
     'Unlock [g]%d %[/] of Famous Scenes': 'Unlock [g]%d%%[/] of Famous Scenes',
     'Reach [g]%d %[/] of the Card Collection': 'Reach [g]%d%%[/] of the Card Collection',
+    # action conditions followed by button icons (see TABLE_PAD): the icons snap to 18 px cells, so these
+    # are worded to end just before a cell edge (icon a few px after the colon) within 42 bytes
+    'If SP Gauge is at 2 or more:': 'If SP Gauge is 2 or more:',
+    'If SP Gauge is at 1 or more, in air:': 'In air, SP Gauge 1 or more:',
+    'During dash attack:': 'In a dash attack:',
+    'When charge attack hits:': 'If charge attack hits:',
+    'During a normal attack:': 'In a normal attack:',
+    # pre-wrapped for a box narrower than the table's estimate (Plans panel ~26 units, save notice ~29)
+    'There are no upgrade actions available for your current pilot level.':
+        'There are no upgrade actions available\nfor your current pilot level.',
+    'This game has an autosave feature.\nPlease do not remove the memory card or turn the system off during autosaves.':
+        'This game has an autosave feature.\nPlease do not remove the memory card or turn\nthe system off during autosaves.',
 }
+
+# Per-table box override: tid -> function(japanese record) -> (width limit, max lines, grow) or None (use
+# the table-wide estimate).
+TABLE_BOXES = {
+    # mission briefings (Next Battle panel): 3 lines (a 4th line is cut off at the bottom), ~24 units
+    # wide; the text types out line by line, so a shrunk text keeps 3 lines at full pitch (records
+    # 594-596 are another 5-line panel and keep the table estimate)
+    7: lambda ja: (24.0, 3, False) if ja.count('\n') < 3 else None,
+}
+
+# Story box width, measured on hardware (the Japanese lines leave room at the right). section -> units
+STORY_WIDTH = {2: 28.0}     # narration box: ~455 px usable (stops short of the next-page arrow)
+
+
+# The action lists (Player Info > Action, Plans) draw the button icons after a condition prefix such as
+# 'If SP Gauge is at 1 or more:' at an x taken from the prefix's byte length, not its drawn width
+# (measured on hardware: the first icon's left edge = text start + 18 px * (bytes // 3), i.e. one
+# Japanese glyph cell per 3 UTF-8 bytes). English is wider per byte, so the icons covered it. These
+# records are padded with invisible ESC+'X' pairs (a 2-byte no-op for the renderer, measurer and line
+# breaker) until the icons land after the text. 42 bytes = longest Japanese record of the table, tested
+# safe on hardware.
+TABLE_PAD = {34: range(0, 9)}       # tid -> records followed by icons (conditions ending in ':')
+PAD = b'\x1bX'
+PAD_MAX = 42
+ICON_CELL = 18                      # px per 3 bytes
+ROW_PX_PER_UNIT = 17.1              # drawn size of one width unit in these rows
+ICON_GAP = 4                        # min px between the text end and the icon
+
+
+def pad_icon_prefix(e, st):
+    w = METRICS.width(e.decode('utf-8')) * ROW_PX_PER_UNIT
+    cells = math.ceil((w + ICON_GAP - 0.5) / ICON_CELL)
+    out = e + b' ' * ((3 * cells - len(e)) & 1)    # trailing space (1 byte) so the 2-byte pairs fit exactly
+    while len(out) < 3 * cells:
+        out += PAD
+    if len(out) > PAD_MAX:
+        st['table: icon prefix too long (shorten it)'] += 1
+        out = e + PAD * max(0, (PAD_MAX - len(e)) // len(PAD))
+    st['table: icon prefix padded'] += 1
+    return out
 
 
 def port_table(dv, dp, st):
@@ -185,9 +237,15 @@ def port_table(dv, dp, st):
         return None
     recs, n = [], 0
     box = box_of(METRICS, [r.decode('utf-8', 'replace') for r in tv[1]]) if METRICS else None
-    for rv, rp in zip(tv[1], tp[1]):
+    override = TABLE_BOXES.get(tv[0], lambda ja: None)
+    pad = TABLE_PAD.get(tv[0], {})
+    for k, (rv, rp) in enumerate(zip(tv[1], tp[1])):
         if rp.strip(b'\0') and rp != rv:   # PS3 has real text here
-            recs.append(english(rp, rv, st, box, table=True)); n += 1
+            b = override(rv.decode('utf-8', 'replace')) or box
+            e = english(rp, rv, st, b, table=True)
+            if k in pad and METRICS:
+                e = pad_icon_prefix(e, st)
+            recs.append(e); n += 1
         else:                              # PS3 placeholder/empty: keep Vita original
             recs.append(rv)
             if rv.strip(b'\0') and not rp.strip(b'\0'):
@@ -238,7 +296,8 @@ def port_story(dv, dp, st):
             sa = scene_lines(a, '<')
             for t, lines in (sa[1].items() if sa else ()):
                 ja[t] += [x[2].decode('utf-8', 'replace') for x in lines]
-        boxes = {t: box_of(METRICS, v) for t, v in ja.items()}
+        # story text types out line by line at full line spacing: a shrunk text keeps the line count
+        boxes = {t: (STORY_WIDTH.get(t, b[0]), b[1], False) for t, v in ja.items() if (b := box_of(METRICS, v))}
         print('story boxes (width units, max lines):', boxes)
     out = []
     for a, b in zip(iv, ip):

@@ -10,6 +10,7 @@ TAG = re.compile(r'(\[[a-z/]\]|\[\d+:[A-Za-z_0-9]+\])')
 PLACEHOLDER_JA, PLACEHOLDER_EN = 5.0, 11.0    # estimated width of a [n:NAME] substitution (long names, e.g. 'Defense Commander')
 MIN_BOX = 14.0                                 # narrowest wrapping box seen (mission objective panel)
 SCALE_BASE, SCALE_MIN, SCALE_FULL = 0x60, 16, 32  # must match build_font.py (marker ESC + chr(0x60 + s))
+SCALE_BASE_PITCH = 0x50                        # ESC + chr(0x50 + s): same scale, line pitch kept
 # characters the Vita font lacks -> closest glyph it has
 FIXUPS = {'Ü': 'U', 'ü': 'u', 'ä': 'a', 'ö': 'o', 'é': 'e', '—': '―', '\xa0': ' ', '℠': ''}
 
@@ -48,24 +49,30 @@ class Metrics:
     def wrap(self, s, lim, max_lines):
         """Return s with line breaks so every line fits lim. Keeps the original breaks when that still
         fits in max_lines, otherwise reflows the whole text (fewest lines)."""
-        if self.line_width(s) <= lim:
+        if self.line_width(s) <= lim and s.count('\n') < max_lines:
             return s
         keep = [l for p in s.split('\n') for l in self._greedy(p, lim)]
         flow = self._greedy(s.replace('\n', ' '), lim)
         return '\n'.join(keep if len(keep) <= max_lines or len(keep) <= len(flow) else flow)
 
-    def fit(self, s, lim, max_lines):
+    def fit(self, s, lim, max_lines, grow=True):
         """Wrap s for a box of lim units x max_lines lines. If it does not fit at full size, shrink:
-        returns (text, scale out of 32) for the largest scale whose wrapped height fits; the text then
-        starts with the ESC scale marker read by the eboot hook (build_font.py build_fit_code)."""
+        returns (text, scale out of 32) for the largest scale whose wrapped text fits. grow: a shrunk
+        text may use more lines, as long as their total (scaled) height fits; without it, the line
+        count stays within max_lines and the marker keeps the full line pitch (for boxes that also
+        draw line by line at full pitch, e.g. story text while it types out). A shrunk text gets the ESC scale marker read by the eboot hook
+        (build_font.py, per-string text scale) at its start and after every line break: the hook only
+        looks at the start of the string it draws, and some screens draw each line on its own."""
         w = self.wrap(s, lim, max_lines)
         if w.count('\n') + 1 <= max_lines:
             return w, SCALE_FULL
         for sc in range(SCALE_FULL - 1, SCALE_MIN - 1, -1):
             w = self.wrap(s, lim * SCALE_FULL / sc, max_lines)
-            if (w.count('\n') + 1) * sc <= max_lines * SCALE_FULL:
+            n = w.count('\n') + 1
+            if (n * sc <= max_lines * SCALE_FULL) if grow else n <= max_lines:
                 break
-        return '\x1b' + chr(SCALE_BASE + sc) + w, sc
+        mark = '\x1b' + chr((SCALE_BASE if grow else SCALE_BASE_PITCH) + sc)
+        return mark + w.replace('\n', '\n' + mark), sc
 
 
 def fixup(s):

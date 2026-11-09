@@ -182,8 +182,12 @@ def ascii_widths(chars, widths):
 # (+0x48) and line spacing (+0x50) are scaled. ESC + any letter except 'C' is a 2-byte no-op for the
 # renderer, measurer and line breaker, so the marker itself is invisible. build_text.py adds it to
 # strings that need more lines than their box holds.
+# ESC + chr(0x50 + s) (0x60..0x6f) is the same scale but keeps the line pitch (+0x48 + +0x50): for boxes
+# that also draw their text line by line at full pitch while it types out (story text, mission
+# briefings), so the finished text has the same line spacing as the text being typed.
 FIT_HOOK, FIT_RET = 0x811d2358, 0x811d235c      # ldr.w r0, [sb, #0x30]
 SCALE_BASE, SCALE_MIN, SCALE_MAX = 0x60, 16, 31
+SCALE_BASE_PITCH = 0x50
 EXPECT_FIT = {FIT_HOOK: 'd9f83000'}
 
 
@@ -313,25 +317,40 @@ def build_code(ks, sp, d, tab_lo, tab_hi, tab_ascii):
         b.w #{A(RET_A):#x}
     """)
     # --- per-string text scale
+    # r2 = font state (low register: 2-byte loads/stores, the 1.02 code gap is tiny), r3 = line pitch
+    # (+0x48 glyph height + +0x50 line gap); r1 = scale/32. Pitch is scaled too, except for the
+    # keep-pitch markers; the gap becomes pitch - new height. r2, r3 are free here (the box draw
+    # function moved its r2/r3 arguments to sl/sb on entry).
     def scale(off):
         return f"""
-        ldr.w r0, [r8, #{off:#x}]
+        ldr r0, [r2, #{off:#x}]
         muls r0, r1, r0
         asrs r0, r0, #5
-        str.w r0, [r8, #{off:#x}]"""
+        str r0, [r2, #{off:#x}]"""
     fit = sp.place(lambda at: f"""
         ldrb r0, [r7]
         cmp r0, #0x1b
         bne done
         ldrb r1, [r7, #1]
-        subs r1, #{SCALE_BASE}
+        subs r1, #{SCALE_BASE_PITCH}
         cmp r1, #{SCALE_MIN}
         blo done
+        mov r2, r8
+        ldr r3, [r2, #0x48]
+        ldr r0, [r2, #0x50]
+        add r3, r0
+        cmp r1, #{SCALE_MAX}
+        bls keep
+        subs r1, #{SCALE_BASE - SCALE_BASE_PITCH}
         cmp r1, #{SCALE_MAX}
         bhi done
+        muls r3, r1, r3
+        asrs r3, r3, #5
+    keep:
         {scale(0x44)}
         {scale(0x48)}
-        {scale(0x50)}
+        subs r3, r3, r0
+        str r3, [r2, #0x50]
     done:
         ldr.w r0, [sb, #0x30]
         b.w #{A(FIT_RET):#x}
