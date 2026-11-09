@@ -1,5 +1,5 @@
 {
-  "version": "0.2.1",
+  "version": "0.3.0",
   "files": [
     {
       "patch": "LINKDATA.B.xdelta",
@@ -11,8 +11,8 @@
       },
       "target": {
         "path": "rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B",
-        "size": 7565312,
-        "sha1": "a51e4ea6dcf7f3e99ca650674453800b381bd9d1"
+        "size": 7571456,
+        "sha1": "4d4716d72688989f5294a52072c34d791596dfcd"
       }
     },
     {
@@ -39,8 +39,8 @@
       },
       "target": {
         "path": "rePatch/PCSG00278/eboot.bin",
-        "size": 8634604,
-        "sha1": "61fdc2fcb2ed2cad4d98db89c572b123b910aeb2"
+        "size": 8634620,
+        "sha1": "ae210ca5aafdcac88fbce886625b78c0086e7a67"
       }
     },
     {
@@ -53,8 +53,8 @@
       },
       "target": {
         "path": "rePatch/PCSG00278/eboot.bin",
-        "size": 8637516,
-        "sha1": "7c9881bff89c0b292c8680af54f5e8fb3ff6ab90"
+        "size": 8637532,
+        "sha1": "ffbf4ba5cb41be6dfe68018ce765e56301a0da09"
       }
     }
   ]

@@ -6,7 +6,7 @@ The game was released in the West only on PS3, as *Dynasty Warriors: Gundam Rebo
 **official English localization** from the PS3 release onto the Japanese Vita release. Both versions run on the same
 engine and use the same data layout.
 
-> **Status: playable in English (v0.2.1, early test release; game versions 1.00 and 1.02).** Tested on a real
+> **Status: playable in English (v0.3.0, early test release; game versions 1.00 and 1.02).** Tested on a real
 > PS Vita and in Vita3K.
 >
 > **Patch it in your browser with the [web patcher](https://irxd.github.io/shin-gundam-musou-en/)** (new, experimental), or download the patch files
@@ -181,7 +181,7 @@ Requirements: Windows, Python 3.10+ with Pillow and keystone-engine, 7-Zip and x
 Then:
 
 ```sh
-python -P scripts/make_release.py 0.2.1
+python -P scripts/make_release.py 0.3.0
 ```
 
 This builds the patched eboot (fself, one per game version), `LINKDATA.B` (text) and `LINKDATA.C` (font + images) into
