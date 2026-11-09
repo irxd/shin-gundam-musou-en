@@ -133,6 +133,7 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 | Mission dialogue & messages | ✅ ~66k strings |
 | Names, menus, items, tutorials, help texts | ✅ ~5k strings |
 | Story scenes & narration | ✅ 5,461 lines |
+| Video cutscene subtitles | ✅ 420 lines (42 cutscenes) |
 | Font | ✅ Proportional English text with word wrap; long lines shrink to fit their box |
 | Images: YES/NO/OK buttons, chapter title cards, boot notice & logo, title screen | ✅ |
 | Game name on the home screen | ⏳ Still Japanese (planned) |
@@ -186,7 +187,7 @@ python -P scripts/make_release.py 0.3.0
 
 This builds the patched eboot (fself, one per game version), `LINKDATA.B` (text) and `LINKDATA.C` (font + images) into
 `build/`, creates xdelta patches, verifies they round-trip, and writes `release/…zip`. The individual steps are
-`tools/build_font.py`, `tools/build_images.py` and `tools/build_text.py`.
+`tools/build_font.py`, `tools/build_images.py`, `tools/build_movies.py` and `tools/build_text.py`.
 
 ## How it works
 
@@ -235,6 +236,7 @@ tools/story.py           story/event scene format (entry 171)
 tools/textwrap_vita.py   line breaking + per-string text scale markers
 tools/build_font.py      font atlas widths + eboot hooks (proportional text, word wrap, scale) -> fself
 tools/build_images.py    English textures from the PS3 release (buttons, title cards, logos, notice)
+tools/build_movies.py    English subtitles for the video cutscenes (LINKDATA.C, PS3 English slot -> Vita Japanese slot)
 tools/build_sfo.py       English game name in param.sfo (experimental, not in the release yet)
 tools/unfself.py         decrypted SELF (FAGDec) -> ELF
 tools/g1t*.py, dxt.py    G1T texture decoding / DXT5 encoding

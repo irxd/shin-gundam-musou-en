@@ -73,6 +73,7 @@ def main():
     for v, (_, out_v, *_r) in GAME.items():
         shutil.copy(out_v / 'eboot.bin', BUILD.parent / f'eboot_v{v}.bin')
     py('build_images.py', PS3 / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C')
+    py('build_movies.py', PS3 / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C')
     py('build_text.py', VITA / 'LINKDATA.B', PS3 / 'LINKDATA.B', BUILD / 'LINKDATA_NGP/LINKDATA.B')
 
     # 2. xdelta: original -> patched
