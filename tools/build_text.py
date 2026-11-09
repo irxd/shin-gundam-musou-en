@@ -17,11 +17,13 @@ METRICS = None    # set in main(); None disables wrapping
 TABLE_SENTENCE = 12.0    # table records at least this wide (in Japanese) are sentences -> may be wrapped
 
 
-def english(tp, tv, st, box=None, table=False):
+def english(tp, tv, st, box=None, table=False, measured=False):
     """Final English bytes for one string: font fixups + pre-wrap for boxes that need it.
     tp: PS3 English bytes, tv: Vita Japanese bytes it replaces, box: (width limit, max lines) or None.
     table: record of a table entry (menus + help texts). Only sentences are wrapped there (short
-    labels must stay on one line), and never narrower than the Japanese line it replaces."""
+    labels must stay on one line), and never narrower than the Japanese line it replaces, unless the
+    box was measured on hardware (measured: the game wraps the Japanese itself, its lines say nothing;
+    the paragraph breaks are kept, the text is shrunk instead of reflowed)."""
     try:
         s = fixup(tp.decode('utf-8'))
     except UnicodeDecodeError:      # binary data that happens to look like a string table
@@ -31,19 +33,29 @@ def english(tp, tv, st, box=None, table=False):
     check_format(s, tv)
     if METRICS and box:
         ja = tv.decode('utf-8', 'replace')
-        lim, lines, grow = box if len(box) == 3 else (*box, True)
+        lim, lines, grow, fixed = (tuple(box) + (True, False)[len(box) - 2:])[:4]
         if table:
             if '\n' not in ja and METRICS.width(ja, 5.0) < TABLE_SENTENCE:
                 return s.encode('utf-8')
-            lim = max(lim, METRICS.line_width(ja, 5.0))
-        if '\n' in ja or METRICS.width(ja, 5.0) <= lim:      # shown in that box (not a one-line view)
-            w, sc = METRICS.fit(s, lim, lines, grow)
+            if not measured:
+                lim = max(lim, METRICS.line_width(ja, 5.0))
+        if measured or '\n' in ja or METRICS.width(ja, 5.0) <= lim:  # shown in that box (not a one-line view)
+            # measured boxes: a button icon ([BTN][NAME]) is drawn about one glyph wide; stand-in chars
+            # (unknown to the metrics = 1.0 unit) while wrapping
+            icons = BTN.findall(s) if measured else []
+            for k, t in enumerate(icons):
+                s = s.replace(t, chr(0xF000 + k), 1)
+            w, sc = METRICS.fit(s, lim, lines, grow, reflow=not measured, fixed=fixed)
+            for k, t in enumerate(icons):
+                s, w = s.replace(chr(0xF000 + k), t), w.replace(chr(0xF000 + k), t)
             if w != s:
                 st['wrap: strings re-wrapped'] += 1
             if sc < 32:
                 st[f'wrap: shrunk to {sc}/32'] += 1
             s = w
     return s.encode('utf-8')
+
+BTN = re.compile(r'\[BTN\]\[[A-Z0-9_]+\]')
 
 PRINTF = re.compile(r'%[-+ #0]*\d*(?:\.\d+)?(?:hh|h|ll|l)?[diouxXcsfFeEgGp]')
 
@@ -190,11 +202,29 @@ TABLE_OVERRIDES = {
 # Per-table box override: tid -> function(japanese record) -> (width limit, max lines, grow) or None (use
 # the table-wide estimate).
 TABLE_BOXES = {
-    # mission briefings (Next Battle panel): 3 lines (a 4th line is cut off at the bottom), ~24 units
-    # wide; the text types out line by line, so a shrunk text keeps 3 lines at full pitch (records
-    # 594-596 are another 5-line panel and keep the table estimate)
-    7: lambda ja: (24.0, 3, False) if ja.count('\n') < 3 else None,
+    # mission briefings (Next Battle panel): 3 lines (a 4th line is cut off at the bottom), ~22.5 units
+    # wide (~311 px at 13.9 px per unit); the text types out line by line, so a shrunk text keeps 3 lines
+    # at full pitch (records 594-596 are another 5-line panel and keep the table estimate)
+    7: lambda ja: (22.5, 3, False) if ja.count('\n') < 3 else None,
 }
+
+# Tables whose box was measured on hardware (their Japanese lines say nothing about its width):
+# tid -> (width limit, max lines, grow, fixed width). The text keeps its own line breaks, is wrapped to
+# that box and shrunk if it needs more lines. fixed width: the widget breaks the text itself at the box
+# width *before* the shrink is applied, so a shrunk text must still break at the full-size width (the
+# shrink only fits more lines); otherwise a shrunk text may use proportionally longer lines.
+TABLE_MEASURED = {
+    # tutorial / help popups: the popup widget (0x812186c0) breaks at 480 px = 20 units of 24 px (~17.2 px
+    # drawn), at the shrunk size too (build_font.py, BRK_APPLY); 8 lines (the longest Japanese), a 9th
+    # runs into the Close button
+    37: (20.0, 8, True, False),
+    # area restrictions (Area screen, under the briefing): one condition per line, ~22.5 units
+    26: (22.5, 3, True, False),
+}
+
+# Tables the game wraps by itself whose PS3 text has hand line breaks made for the PS3 font: where the
+# Japanese has none, they are dropped (the Vita breaks elsewhere, which left short lines).
+TABLE_JOIN = {10}       # character descriptions (Database > Characters)
 
 # Story box width, measured on hardware (the Japanese lines leave room at the right). section -> units
 STORY_WIDTH = {2: 28.0}     # narration box: ~455 px usable (stops short of the next-page arrow)
@@ -238,11 +268,16 @@ def port_table(dv, dp, st):
     recs, n = [], 0
     box = box_of(METRICS, [r.decode('utf-8', 'replace') for r in tv[1]]) if METRICS else None
     override = TABLE_BOXES.get(tv[0], lambda ja: None)
+    measured = TABLE_MEASURED.get(tv[0])
     pad = TABLE_PAD.get(tv[0], {})
     for k, (rv, rp) in enumerate(zip(tv[1], tp[1])):
         if rp.strip(b'\0') and rp != rv:   # PS3 has real text here
-            b = override(rv.decode('utf-8', 'replace')) or box
-            e = english(rp, rv, st, b, table=True)
+            b = measured or override(rv.decode('utf-8', 'replace')) or box
+            if tv[0] in TABLE_JOIN:
+                b = None                    # the game wraps these
+                if b'\n' not in rv:
+                    rp = re.sub(rb' *\n *', b' ', rp)
+            e = english(rp, rv, st, b, table=True, measured=bool(measured))
             if k in pad and METRICS:
                 e = pad_icon_prefix(e, st)
             recs.append(e); n += 1

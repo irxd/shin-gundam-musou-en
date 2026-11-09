@@ -46,28 +46,31 @@ class Metrics:
         out.append(cur)
         return out
 
-    def wrap(self, s, lim, max_lines):
+    def wrap(self, s, lim, max_lines, reflow=True):
         """Return s with line breaks so every line fits lim. Keeps the original breaks when that still
-        fits in max_lines, otherwise reflows the whole text (fewest lines)."""
+        fits in max_lines (or always, without reflow), otherwise reflows the whole text (fewest lines)."""
         if self.line_width(s) <= lim and s.count('\n') < max_lines:
             return s
         keep = [l for p in s.split('\n') for l in self._greedy(p, lim)]
+        if not reflow:
+            return '\n'.join(keep)
         flow = self._greedy(s.replace('\n', ' '), lim)
         return '\n'.join(keep if len(keep) <= max_lines or len(keep) <= len(flow) else flow)
 
-    def fit(self, s, lim, max_lines, grow=True):
+    def fit(self, s, lim, max_lines, grow=True, reflow=True, fixed=False):
         """Wrap s for a box of lim units x max_lines lines. If it does not fit at full size, shrink:
         returns (text, scale out of 32) for the largest scale whose wrapped text fits. grow: a shrunk
         text may use more lines, as long as their total (scaled) height fits; without it, the line
         count stays within max_lines and the marker keeps the full line pitch (for boxes that also
         draw line by line at full pitch, e.g. story text while it types out). A shrunk text gets the ESC scale marker read by the eboot hook
         (build_font.py, per-string text scale) at its start and after every line break: the hook only
-        looks at the start of the string it draws, and some screens draw each line on its own."""
-        w = self.wrap(s, lim, max_lines)
+        looks at the start of the string it draws, and some screens draw each line on its own.
+        fixed: lines keep the full-size width limit (for widgets that break the text before scaling)."""
+        w = self.wrap(s, lim, max_lines, reflow)
         if w.count('\n') + 1 <= max_lines:
             return w, SCALE_FULL
         for sc in range(SCALE_FULL - 1, SCALE_MIN - 1, -1):
-            w = self.wrap(s, lim * SCALE_FULL / sc, max_lines)
+            w = self.wrap(s, lim if fixed else lim * SCALE_FULL / sc, max_lines, reflow)
             n = w.count('\n') + 1
             if (n * sc <= max_lines * SCALE_FULL) if grow else n <= max_lines:
                 break

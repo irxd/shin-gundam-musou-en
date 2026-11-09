@@ -145,8 +145,9 @@ WRAP_EMIT = 0x811d2270       # emit current char (reloads it from [sp,#4])
 WRAP_NEXT = 0x811d21e6       # loop continue (next char)
 KINSOKU = 0x811d1270
 RENDER_SPACE = 0x811d1c6e    # ldr.w r6, [r8, #0x44]
-MEASURE_ASCII = 0x811d1ff8   # ldr.w lr, [r8, #0x44] ; add sb, lr
-MEASURE_NEXT = 0x811d1fb6
+MEASURE_ASCII = 0x811d1ff8   # ldr.w lr, [r8, #0x44] ; add sb, lr  (only the ldr is replaced: the
+                             # alternate fonts, [state+0x3c] = 1..3 e.g. the numbers right-aligned in
+                             # Database > records, branch to that add with their own width in lr)
 BUF_SLOT = 0x50              # unused stack slot in the breaker's frame
 # Text boxes (e.g. tutorials) draw each wrapped line with a per-line char cap [state+0x58] =
 # box_width / size (0x811d23a0..: argument setup + bl divide), i.e. 20 chars. Proportional lines hold
@@ -188,7 +189,14 @@ def ascii_widths(chars, widths):
 FIT_HOOK, FIT_RET = 0x811d2358, 0x811d235c      # ldr.w r0, [sb, #0x30]
 SCALE_BASE, SCALE_MIN, SCALE_MAX = 0x60, 16, 31
 SCALE_BASE_PITCH = 0x50
-EXPECT_FIT = {FIT_HOOK: 'd9f83000'}
+# The line breaker 0x811d217c is also called on its own, with a box (e.g. the tutorial popup widget
+# 0x812186c0 breaks the text at the box width, then draws the lines through the box draw function). It
+# applies the box to the font state at 0x811d21ae (bl APPLY), only when a box is passed, and restores the
+# state on exit. Hooked there to apply the box and then the same per-string scale as the box draw, so a
+# shrunk text breaks at the shrunk glyph widths. (Inside the box draw function the breaker is called
+# without a box: the state is already scaled there.)
+BRK_APPLY, APPLY = 0x811d21ae, 0x811d0e8c
+EXPECT_FIT = {FIT_HOOK: 'd9f83000', BRK_APPLY: 'fef76dfe'}
 
 
 def build_code(ks, sp, d, tab_lo, tab_hi, tab_ascii):
@@ -353,7 +361,18 @@ def build_code(ks, sp, d, tab_lo, tab_hi, tab_ascii):
         str r3, [r2, #0x50]
     done:
         ldr.w r0, [sb, #0x30]
-        b.w #{A(FIT_RET):#x}
+        bx lr
+    """)
+    # breaker with a box (bl from BRK_APPLY; r0 = state, r1 = box, r4 = box, sl = state, r7 = text):
+    # apply the box, then fit with r8 = state, sb = box (both set again right after the hook).
+    # r0-r3 are free after it.
+    brk = sp.place(lambda at: f"""
+        push {{r4, lr}}
+        bl #{A(APPLY):#x}
+        mov r8, sl
+        mov sb, r4
+        bl #{fit:#x}
+        pop {{r4, pc}}
     """)
     # cave C (called with bl; lr is dead here): r0 = size * w / 20  (x*3277>>16 == x/20 for our range)
     cave_c = sp.place(lambda at: """
@@ -382,13 +401,16 @@ def build_code(ks, sp, d, tab_lo, tab_hi, tab_ascii):
         mov r6, r0
         pop {{r0, r1, pc}}
     """)
+    # measurer char width (bl from MEASURE_ASCII): r2 = char -> lr = width, added by the original
+    # `add sb, lr` after the hook. r0-r2 are free there.
     measure = sp.place(lambda at: f"""
         push {{lr}}
         mov r0, r2
         ldr.w r1, [r8, #0x44]
         bl #{asciiw:#x}
-        add sb, r0
-        pop {{pc}}
+        pop {{r1}}
+        mov lr, r0
+        bx r1
     """)
     entry = sp.place(lambda at: f"""
         strd r3, r4, [sp, #0x48]
@@ -403,11 +425,11 @@ def build_code(ks, sp, d, tab_lo, tab_hi, tab_ascii):
         (A(WRAP_WIDTH), asm(ks, f'bl #{width:#x}', A(WRAP_WIDTH))),
         (A(WRAP_OVF), asm(ks, f'b.w #{ovf:#x}', A(WRAP_OVF))),
         (A(RENDER_SPACE), asm(ks, f'bl #{space:#x}', A(RENDER_SPACE))),
-        (A(MEASURE_ASCII), asm(ks, f'bl #{measure:#x}', A(MEASURE_ASCII))
-                           + asm(ks, f'b #{A(MEASURE_NEXT):#x}', A(MEASURE_ASCII) + 4)),
-        (A(FIT_HOOK), asm(ks, f'b.w #{fit:#x}', A(FIT_HOOK))),
+        (A(MEASURE_ASCII), asm(ks, f'bl #{measure:#x}', A(MEASURE_ASCII))),
+        (A(FIT_HOOK), asm(ks, f'bl #{fit:#x}', A(FIT_HOOK))),     # returns to FIT_RET
+        (A(BRK_APPLY), asm(ks, f'bl #{brk:#x}', A(BRK_APPLY))),
     ]
-    assert [len(b) for _, b in hooks] == [6, 4, 4, 4, 4, 4, 4, 6, 4], [len(b) for _, b in hooks]
+    assert [len(b) for _, b in hooks] == [6, 4, 4, 4, 4, 4, 4, 4, 4, 4], [len(b) for _, b in hooks]
     return hooks + sp.out
 
 
