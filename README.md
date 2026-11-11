@@ -18,142 +18,130 @@ More screenshots: [Screenshots](#screenshots).
 
 ## Installation
 
-The patch is a set of small **xdelta** files that you apply to files from **your own copy** of the game. No game
-data is included.
+You patch files from **your own copy** of the game. No game data is included.
 
-### Quickest way (real Vita):
-1. Get your decrypted `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C` from the Vita (steps 1 and 2 below),
-   and your decrypted DLC folder if you have DLC installed.
-2. Open the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)**, choose the
-   three files (and the DLC folder) and press **Patch**.
-3. Copy the `rePatch` folder it gives you to `ux0:` on the Vita, and start the game.
+### What you need
 
-### You need
+- **The game:** Shin Gundam Musou, **PCSG00278**, version **1.00** or **1.02**.
+  If the folder `ux0:patch/PCSG00278/` exists on your Vita, you have 1.02. Otherwise you have 1.00.
+- **On the Vita:** HENkaku/Ensō, the **rePatch** plugin, **FAGDec** and **VitaShell**.
+- **On the PC:** Chrome or Edge, for the [web patcher](https://irxd.github.io/shin-gundam-musou-en/).
 
-- **The game:** Shin Gundam Musou, Japanese release **PCSG00278**, version **1.00** or **1.02** (the latest
-  update). Check the version in the game's LiveArea or in `sce_sys/param.sfo`.
-- **For a real Vita:**
-  - A PS Vita on HENkaku/Ensō.
-  - The **rePatch** plugin, installed under `*KERNEL` in `ux0:tai/config.txt` (or `ur0:tai/config.txt`).
-  - **FAGDec**, to decrypt the game's `eboot.bin`.
-  - **VitaShell**, to copy files between the Vita and your PC.
-- **For [Vita3K](https://vita3k.org/):** the game installed in Vita3K. Its files are already decrypted.
-- **To apply the patch**, one of:
-  - the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** in desktop Chrome or Edge (easiest), or
-  - **[Delta Patcher](https://github.com/marco-calautti/DeltaPatcher/releases)** with the patch files from
-    [Releases](https://github.com/irxd/shin-gundam-musou-en/releases). Other xdelta3 tools should also work, but Delta Patcher is the one that was tested.
+Playing on Vita3K instead? See [Vita3K](#vita3k).
 
-### Real PS Vita (rePatch)
+### Real PS Vita
 
-First check which version you have: **1.00** (no update) or **1.02** (the update is installed, so
-`ux0:patch/PCSG00278/` exists). The version only decides where the `eboot.bin` comes from (step 1).
+**1. Get the eboot (with FAGDec)**
 
-1. **Decrypt the eboot with FAGDec:**
-   1. Open FAGDec.
-   2. Select the game **真・ガンダム無双** and press ✕.
-   3. Select the `eboot.bin` for your version and press ✕:
-      - **1.00:** `ux0:app/PCSG00278/eboot.bin`
-      - **1.02:** `ux0:patch/PCSG00278/eboot.bin`
+1. Open FAGDec, select **真・ガンダム無双** and press ✕.
+2. Select the eboot for your version and press ✕:
+   - **1.00:** `ux0:app/PCSG00278/eboot.bin`
+   - **1.02:** `ux0:patch/PCSG00278/eboot.bin`
+3. Press ○, then START, and choose **START DECRYPT (ELF)**.
+4. Copy the `eboot.bin.elf` it made to your PC. It is in `ux0:FAGDec/app/PCSG00278/` (1.00) or
+   `ux0:FAGDec/patch/PCSG00278/` (1.02).
 
-      It now appears on the right, under *Modules to be decrypted*.
-   4. Press ○ to go back to the main menu.
-   5. Press START and choose **START DECRYPT (ELF)**.
-   6. The decrypted file is written to `ux0:FAGDec/app/PCSG00278/` (1.00) or `ux0:FAGDec/patch/PCSG00278/`
-      (1.02). Copy the `eboot.bin.elf` from there to your PC.
-2. **Copy the decrypted data files** (both versions): in VitaShell, go to `ux0:app/PCSG00278/`, open the
-   folder with *Open decrypted* (△ menu), and copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to
-   your PC. `LINKDATA.C` is about 1 GB.
+**2. Get the game data (with VitaShell)**
 
-   **If you have DLC installed** (`ux0:addcont/PCSG00278/` exists), copy it too: in VitaShell, go to
-   `ux0:addcont/PCSG00278/`, open each DLC folder (`DSC…` and `DMS…`) with *Open decrypted* and copy its `.BIN`
-   file to your PC, keeping the folder names (for example `PCSG00278/DSC0000000000000/DSC_000.BIN`). About 53 MB
-   for all 23. This is required: the patched eboot reads the DLC from `ux0:rePatch/PCSG00278/DLC/`, so a DLC
-   whose patched files are missing there won't load.
-3. **Apply the patch** on your PC. Choose one:
+1. Go to `ux0:app/PCSG00278/`, press △ and choose **Open decrypted**.
+2. Copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to your PC. (`LINKDATA.C` is about 1 GB.)
 
-   **Option A: web patcher** (easiest)
-   1. Open the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** in desktop Chrome or Edge.
-   2. Choose (or drop) your `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C`. If you have DLC, also choose (or
-      drop) your DLC folder with **DLC folder**. It detects your game version and checks every file.
-   3. Press **Patch**. You get the finished `rePatch` folder, saved into a folder you pick or as a zip.
+**3. Get the DLC (only if you have DLC installed)**
 
-   Everything runs in your browser; nothing is uploaded. If it doesn't work for you, use option B.
+If `ux0:addcont/PCSG00278/` exists, you have DLC. You must patch it too, or the DLC won't load.
 
-   **Updating to a new version?** You can choose only the files that changed (the release notes say which).
-   Choose the original, unpatched files, as always, and replace those files in `ux0:rePatch/PCSG00278/`.
+1. In VitaShell, go to `ux0:addcont/`, select the `PCSG00278` folder, press △ and choose **Open decrypted**.
+2. Copy the whole `PCSG00278` folder to your PC (about 53 MB).
 
-   **Option B: Delta Patcher** (manual)
-   1. Download the latest `shin-gundam-musou-en-<version>.zip` from [Releases](https://github.com/irxd/shin-gundam-musou-en/releases) and unzip it.
-   2. Apply each `.xdelta` file to its source file. For the eboot use `eboot_v1.00.xdelta` **or**
-      `eboot_v1.02.xdelta` to match the eboot you decrypted, and name the result `eboot.bin`.
+**4. Patch the files**
 
-      | Source file (from step 1 or 2) | Patch | Result goes to |
-      |---|---|---|
-      | `eboot.bin.elf`, version 1.00 | `patches/eboot_v1.00.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
-      | `eboot.bin.elf`, version 1.02 | `patches/eboot_v1.02.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
-      | `LINKDATA.B` | `patches/LINKDATA.B.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
-      | `LINKDATA.C` | `patches/LINKDATA.C.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
-      | DLC: `<folder>/<file>.BIN` | `patches/DLC/<folder>/<file>.BIN.xdelta` | `ux0:rePatch/PCSG00278/DLC/<folder>/<file>.BIN` |
+1. Open the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** in Chrome or Edge.
+2. Choose your `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C`. If you have DLC, also choose that `PCSG00278`
+   folder under **DLC folder**.
+3. Press **Patch**. You get a `rePatch` folder (or a zip with it).
 
-   > **Note:** *Delta Patcher* overwrites the file you select unless *Backup original file* is ticked. Keep an
-   > unpatched copy of each file (or tick the backup option) in case you need it again, for example for a future
-   > patch version. `checksums.txt` in the zip lists the SHA-1 of each expected source file and patched result;
-   > if a source file doesn't match, the patch fails: check the game version and that the file is decrypted.
-4. **Copy the patched files** to the Vita (with the web patcher: copy its `rePatch` folder to `ux0:`):
-   ```
-   ux0:rePatch/PCSG00278/eboot.bin
-   ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B
-   ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C
-   ux0:rePatch/PCSG00278/DLC/<DLC folder>/<file>.BIN     (only if you have DLC; one folder per installed DLC)
-   ```
+Everything runs in your browser; nothing is uploaded.
 
-Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePatch/PCSG00278/`.
+**5. Copy to the Vita**
 
-5. **Optional: English game name on the home screen.** The home screen takes the name from the system's app
-   database, not from the game files, so this edits that database (only the game's 5 name entries). It needs
-   Python 3 on your PC.
-   1. Don't install or delete apps on the Vita until you've finished these steps.
-   2. In VitaShell, copy `ur0:shell/db/app.db` to your PC.
-   3. Run `python tools/rename_title.py app.db` (`tools/` is in the release zip). It saves the original as
-      `app.db.orig` first.
-   4. Copy the changed `app.db` back to `ur0:shell/db/app.db`, replacing it, and restart the Vita.
+Copy the `rePatch` folder to `ux0:` on the Vita (unzip it first if you chose a zip). Start the game. Done!
 
-   To undo: copy `app.db.orig` back as `ur0:shell/db/app.db` and restart. Reinstalling the game, or
-   rebuilding the database, also brings the Japanese name back.
+Your game files in `ux0:app` and `ux0:patch` are not changed.
+
+**6. Optional: English game name on the home screen**
+
+The name under the game's icon stays Japanese unless you do this.
+
+1. Don't install or delete apps on the Vita until you've finished these steps.
+2. With VitaShell, copy `ur0:shell/db/app.db` to your PC. Keep this file as a backup.
+3. In the [web patcher](https://irxd.github.io/shin-gundam-musou-en/), choose it under
+   **Optional: English game name**. It saves a new `app.db`.
+4. Copy the new `app.db` to `ur0:shell/db/app.db`, replacing it, and restart the Vita.
+
+(Without the web patcher: `python tools/rename_title.py app.db`, from the `tools` folder in the release zip.)
+
+### Updating to a new patch version
+
+Do steps 1–5 again with your **original, unpatched** files, and replace the old files in `ux0:rePatch/PCSG00278/`.
+Keep your original files somewhere safe for this. If the release notes say only some files changed, you can
+patch just those.
+
+### Manual patching (Delta Patcher)
+
+Use this only if the web patcher doesn't work for you.
+
+1. Download `shin-gundam-musou-en-<version>.zip` from [Releases](https://github.com/irxd/shin-gundam-musou-en/releases)
+   and unzip it.
+2. In [Delta Patcher](https://github.com/marco-calautti/DeltaPatcher/releases), apply each patch to its file and put
+   the result here:
+
+   | Your file | Patch | Put the result here |
+   |---|---|---|
+   | `eboot.bin.elf` (1.00) | `patches/eboot_v1.00.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
+   | `eboot.bin.elf` (1.02) | `patches/eboot_v1.02.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
+   | `LINKDATA.B` | `patches/LINKDATA.B.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
+   | `LINKDATA.C` | `patches/LINKDATA.C.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
+   | DLC: `<folder>/<file>.BIN` | `patches/DLC/<folder>/<file>.BIN.xdelta` | `ux0:rePatch/PCSG00278/DLC/<folder>/<file>.BIN` |
+
+   Use only the eboot patch for your version. Rename the patched eboot to `eboot.bin`.
+
+Delta Patcher overwrites the file you patch unless you tick **Backup original file**, so keep a copy of your
+original files. If a patch fails, check the game version and that the file is decrypted (`checksums.txt` in the
+zip lists the expected files).
 
 ### Vita3K
 
-1. Find the installed game at `<Vita3K data>/ux0/app/PCSG00278/`. Back up `eboot.bin` and
-   `LINKDATA_NGP/LINKDATA.B` and `LINKDATA.C`.
-2. Get a decrypted `eboot.bin.elf`. You can get one from FAGDec on a
-   Vita, or from Vita3K's *ELF dumping* option (Settings → Debug), which writes
-   `elfdumps/PCSG00278/0x81000000-0x8137BCCC_app0.elf`. Rename it to `eboot.bin.elf`.
-3. Apply the patch to the eboot and the two LINKDATA files, with the [web patcher](https://irxd.github.io/shin-gundam-musou-en/) or Delta Patcher
-   (option A or B above).
-4. Put the patched LINKDATA files into `ux0/app/PCSG00278/LINKDATA_NGP/`, replacing the originals. Put the
-   patched `eboot.bin` into `ux0/app/PCSG00278/` (1.00), or into `ux0/patch/PCSG00278/` if the 1.02 update
-   is installed in Vita3K.
-5. DLC (if installed in Vita3K): patch the `.BIN` files from `<Vita3K data>/ux0/addcont/PCSG00278/` and put them
-   into `ux0/app/PCSG00278/DLC/<DLC folder>/` (the patched eboot reads the DLC from `app0:DLC/`). Not tested in
-   Vita3K yet.
-6. Optional, English game name in the game list: run `python tools/rename_title.py <Vita3K data>/ux0/app/PCSG00278/sce_sys/param.sfo`
-   (and the same for `ux0/patch/PCSG00278/sce_sys/param.sfo` if the 1.02 update is installed there), then restart Vita3K.
+1. Find the game in `<Vita3K data>/ux0/app/PCSG00278/`. Back up `eboot.bin`, `LINKDATA_NGP/LINKDATA.B` and
+   `LINKDATA_NGP/LINKDATA.C` (with the 1.02 update: also `ux0/patch/PCSG00278/eboot.bin`).
+2. Get an `eboot.bin.elf`: either from FAGDec on a Vita (step 1 above), or turn on **ELF dumping** in Vita3K
+   (Settings → Debug), start the game once, and rename `elfdumps/PCSG00278/0x81000000-0x8137BCCC_app0.elf` to
+   `eboot.bin.elf`.
+3. Patch the files with the [web patcher](https://irxd.github.io/shin-gundam-musou-en/) (Vita3K's files are already
+   decrypted).
+4. From the patcher's `rePatch/PCSG00278/` folder, copy:
+   - `LINKDATA_NGP/` into `ux0/app/PCSG00278/`, replacing the files there
+   - `eboot.bin` into `ux0/app/PCSG00278/` (1.00) or `ux0/patch/PCSG00278/` (1.02)
+   - `DLC/` (if you have DLC) into `ux0/app/PCSG00278/`
+5. Optional, English name in the game list: back up `ux0/app/PCSG00278/sce_sys/param.sfo`, choose it in the web
+   patcher under **Optional: English game name**, put the new `param.sfo` in its place and restart Vita3K.
+   With the 1.02 update, do the same for `ux0/patch/PCSG00278/sce_sys/param.sfo`.
+
+### Removing the patch
+
+Only if you want to go back to the Japanese game. You don't need this to install or update the patch.
+
+- **Real Vita:** delete `ux0:rePatch/PCSG00278/`. If you did step 6, copy your backup `app.db` back to
+  `ur0:shell/db/app.db` and restart the Vita.
+- **Vita3K:** put back the files you backed up and delete `ux0/app/PCSG00278/DLC/`.
 
 ## Known issues
 
 - Some images still have Japanese text, such as parts of menu screens and one tutorial picture (the network
   menu, which is Japanese on PS3 too). These stay as they are.
-- Lines the PS3 release has no English for (blank, or "......") use the official English of the same line
-  elsewhere in the game, or a new fan translation (`text/base/`). Only unused developer placeholders
-  (ダミー and the like) are left in Japanese.
-- With DLC installed, the patched DLC files are required (see step 2): the patched eboot reads every installed
-  DLC from `ux0:rePatch/PCSG00278/DLC/`. rePatch's own DLC support (reAddcont) didn't work for this game.
-- Long lines in story and battle text boxes are drawn in a smaller font so that they fit. Center banners
-  (mission messages) are always one line; very long lines in the English release were shortened to fit.
-- The game's name on the home screen stays 真・ガンダム無双 unless you do the optional step 5 (it edits the
-  system's app database; rePatch can't change it).
-- Tested on a real PS Vita (1.02, via rePatch), in Vita3K (1.00 and 1.02) and in Vita3K+ 1.4 (1.00).
-  Please report problems.
+- English is longer than Japanese, so long lines in story and battle text boxes are drawn in a smaller font to
+  fit, and some very long center-screen mission messages were shortened.
+
+Found another problem? Please [open an issue](https://github.com/irxd/shin-gundam-musou-en/issues).
 
 ## What's translated
 
@@ -167,8 +155,17 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 | Images: YES/NO/OK buttons, chapter title cards, boot notice & logo, title screen, tutorial pictures | ✅ |
 | Game name on the home screen | ✅ Optional step (`tools/rename_title.py`) |
 | Lines the PS3 release left blank or "......" (menu help, partner skills, battle messages, music titles…) | ✅ Official English from elsewhere in the game, the rest a new fan translation |
-| Other images with Japanese text (e.g. parts of menu screens) | ➖ Not planned (known limitation) |
+| Other images with Japanese text (e.g. parts of menu screens) | ➖ Not planned (see [Known issues](#known-issues)) |
 | DLC (17 extra scenarios, 6 extra mobile suit packs) | ✅ Official English where the text matches the base game; the rest is a new fan translation |
+
+The English comes from the PS3 release, which has no English for some Vita lines: some are left empty and
+some just say "......". These are mostly Vita-only content, such as partner skill descriptions, menu help lines,
+some Ultimate Mode texts and battle messages, and music titles. For these lines the patch uses the official
+English of the same Japanese line where it appears elsewhere in the game, and otherwise a new fan translation
+(about 250 lines, in `text/base/`) that uses the official names and terms. The only Japanese left in the text is
+developer placeholders the game never shows, such as ダミー ("dummy"). See [How it works](#how-it-works).
+
+Tested on a real PS Vita (1.02, via rePatch), in Vita3K (1.00 and 1.02) and in Vita3K+ 1.4 (1.00).
 
 ## Screenshots
 
@@ -207,7 +204,7 @@ Requirements: Windows, Python 3.10+ with Pillow and keystone-engine, 7-Zip and x
 - FAGDec output `eboot.bin.elf` + `self_auth.bin` → `PCSG00278_100/` (game 1.00) and `PCSG00278_102/`
   (update 1.02; `python -P tools/unfself.py eboot.bin eboot.bin.elf` turns FAGDec's decrypted SELF into the ELF)
 - PS3 `LINKDATA_PS3/LINKDATA.B` and `.C` extracted from the ISO with 7-Zip → `decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/`
-- all 23 DLC folders, decrypted (VitaShell *Open decrypted* on each folder of `ux0:addcont/PCSG00278/`) →
+- all 23 DLCs, decrypted (VitaShell *Open decrypted* on `ux0:addcont/PCSG00278/`) →
   `decrypted/vita/addcont/PCSG00278/<DLC folder>/`
 
 Then:
@@ -256,8 +253,23 @@ records: u16 length, bytes, NUL, zero-pad to 4
 entry is zero-padded to a 16-byte boundary and ends with 0x1A
 ```
 
-`tools/build_text.py` keeps every Vita structure and script byte as-is and swaps in only the PS3 strings. Where the
-PS3 line is blank or the counts differ, it keeps the Japanese original.
+`tools/build_text.py` keeps every Vita structure and script byte as-is and swaps in only the PS3 strings, line by
+line. Where the two versions don't line up:
+
+- **A PS3 table has extra lines at the end** (blank, `......` or `DUMMY`): the extra lines are dropped and the
+  rest is matched line by line (5 battle-message tables).
+- **The PS3 line is blank, or `......` where the Vita has real text:** the build first looks for the official
+  English of the same Japanese line elsewhere in the game (a first pass collects every Japanese → English pair
+  the PS3 release has), then for a translation in `text/base/*.json`. If neither exists, the Japanese stays.
+- **The PS3 line is itself Japanese:** it is never used. One PS3 table (table 18) holds a Japanese character
+  list in the slot where the Vita has partner skill descriptions, so the Vita line is kept and translated.
+- **The PS3 line has a mistake** (for example, a name in the wrong placeholder): `text/base/fixes.json`
+  replaces it.
+
+`text/base/*.json` and `text/dlc/*.json` map the first 10 hex digits of the SHA-1 of the Japanese line (UTF-8) to
+the English, so no Japanese game text is stored in this repository. The build warns when a translation is no
+longer used (the Japanese changed). Lines the game never shows (developer placeholders such as ダミー, "dummy")
+stay as they are.
 
 ## Repository layout
 
@@ -280,7 +292,8 @@ tools/unfself.py         decrypted SELF (FAGDec) -> ELF
 tools/g1t*.py, dxt.py    G1T texture decoding / DXT5 encoding
 tools/re/                reverse-engineering helpers for the eboot
 scripts/make_release.py  full build + xdelta release package (+ the web patcher's patch files)
-docs/index.html          web patcher (GitHub Pages); docs/patcher/ has its VCDIFF decoder and zip writer
+docs/index.html          web patcher (GitHub Pages); docs/patcher/ has its VCDIFF decoder, zip writer
+                         and title.js (English game name in app.db via sql.js, or param.sfo)
 ```
 
 ## Credits

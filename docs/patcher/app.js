@@ -1,6 +1,7 @@
 // Page code for the web patcher: file picking, status, progress and saving. Logic lives in core.js.
 import { identify, patchFile, PatchError } from './core.js';
 import { makeZip, crc32 } from './zip.js';
+import { titleFileKind, renameSfo, renameAppDb, loadSqlJs, TitleError, EN } from './title.js';
 
 const $ = (s) => document.querySelector(s);
 const SLOTS = ['eboot', 'LINKDATA.B', 'LINKDATA.C'];
@@ -29,6 +30,8 @@ async function init() {
   $('#files').addEventListener('change', (e) => addFiles(e.target.files));
   document.querySelector('[data-slot="DLC"]').addEventListener('click', () => $('#dlc-dir').click());
   $('#dlc-dir').addEventListener('change', (e) => addFiles(e.target.files));
+  $('#title-pick').addEventListener('click', () => $('#title-file').click());
+  $('#title-file').addEventListener('change', (e) => { if (e.target.files[0]) renameTitle(e.target.files[0]); e.target.value = ''; });
   const drop = $('#drop');
   drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
   drop.addEventListener('dragleave', (e) => { if (!drop.contains(e.relatedTarget)) drop.classList.remove('over'); });
@@ -74,6 +77,7 @@ async function addFiles(list) {
   // a picked or dropped folder: skip files this patcher doesn't need (sce_sys etc.) without an error
   const fromFolder = files.some((f) => f.webkitRelativePath?.includes('/'));
   for (const file of files) {
+    if (!fromFolder && /\.(db|sfo)$/i.test(file.name)) { renameTitle(file); continue; }   // dropped app.db / param.sfo
     if (fromFolder && !/\.(bin|elf)$|^linkdata\.[bc]$/i.test(file.name)) continue;
     const isDlc = /^(DSC|DMS)\d.*\.bin$/i.test(file.name);
     const row = { file, checking: true };
@@ -237,6 +241,41 @@ function zipSink(path, entries) {
     close: async () => { entries.push(e); },
     abort: async () => {},
   };
+}
+
+// Optional English game name: app.db (real Vita) or param.sfo (Vita3K) in, the changed file saved back out.
+async function renameTitle(file) {
+  const note = $('#title-note'), meta = $('#title-meta');
+  hideError();
+  note.textContent = 'Working…';
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const kind = titleFileKind(bytes);
+    if (!kind) throw new TitleError(`${file.name} is not app.db or param.sfo.`);
+    const r = kind === 'sfo' ? renameSfo(bytes) : renameAppDb(await loadSqlJs(), bytes);
+    if (!r.changed) {
+      note.textContent = `Nothing to change: the name is already "${EN}".`;
+      meta.textContent = 'Choose';
+      return;
+    }
+    const name = kind === 'sfo' ? 'param.sfo' : 'app.db';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([r.bytes], { type: 'application/octet-stream' }));
+    a.download = name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+    note.textContent = kind === 'sfo'
+      ? 'Saved param.sfo: put it back in sce_sys/ and restart Vita3K.'
+      : 'Saved app.db: copy it back to ur0:shell/db/ and restart the Vita.';
+    meta.textContent = 'Done';
+  } catch (err) {
+    note.textContent = 'Not changed';
+    meta.textContent = 'Choose';
+    showError(err instanceof TitleError ? err.message : `Something went wrong: ${err?.message ?? err}`);
+    if (!(err instanceof TitleError)) console.error(err);
+  }
 }
 
 function showError(msg) { $('#error').textContent = msg; $('#error-card').hidden = false; }

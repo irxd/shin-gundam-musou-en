@@ -11,7 +11,7 @@ Needs xdelta3 (tools/bin/xdelta3.exe or on PATH) and these local inputs:
     decrypted/vita/param.sfo.orig, param_102.sfo.orig     original sce_sys/param.sfo of the game / of the update
     decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/LINKDATA.B, LINKDATA.C   PS3 EU source of the English text/images
     decrypted/vita/addcont/PCSG00278/D*/*.BIN             decrypted DLC (VitaShell "Open decrypted" on
-                                                          ux0:addcont/PCSG00278/<folder>), all 23 DLCs
+                                                          ux0:addcont/PCSG00278), all 23 DLCs
 
 Output: release/shin-gundam-musou-en-<version>/  (+ .zip)
         docs/patcher/patches/  (the same patches + manifest.json, for the web patcher on GitHub Pages)
