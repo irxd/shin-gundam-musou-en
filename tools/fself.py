@@ -3,7 +3,8 @@
 Differences from the original tool:
   * the module NID inside sceModuleInfo is NOT rewritten (keeps the game's original NID)
   * authid can be taken from FAGDec's self_auth.bin
-Output layout matches vita-make-fself: 0x1000-byte header area, then each segment (optionally zlib).
+Output: 0x1000-byte header area, then the whole ELF (uncompressed, segments at 0x1000 + p_offset as in an
+official SELF) or each segment zlib-compressed one after another (vita-make-fself layout).
 """
 import struct, hashlib, zlib
 
@@ -56,7 +57,16 @@ def make_fself(elf: bytes, authid=0x2F00000000000001, compress=True, self_type=S
         out[p:p + len(ci)] = ci; p += len(ci)
 
     seginfos = []
-    for i, ph in enumerate(phdrs):
+    if not compress:
+        # uncompressed: the whole ELF at HEADER_LEN, so every segment is at HEADER_LEN + p_offset, as in an
+        # official SELF. Some loaders (Vita3K+ 1.4) read the segments at those offsets and crash on the
+        # vita-make-fself layout (segments packed one after another).
+        out += elf
+        out += b'\0' * ((4 - len(out) % 4) % 4)
+        for ph in phdrs:
+            p_offset, p_filesz = struct.unpack_from('<I', ph, 4)[0], struct.unpack_from('<I', ph, 16)[0]
+            seginfos.append((HEADER_LEN + p_offset, (p_filesz + 3) & ~3, 1, 2))
+    for i, ph in enumerate(phdrs if compress else ()):
         p_offset, p_filesz = struct.unpack_from('<I', ph, 4)[0], struct.unpack_from('<I', ph, 16)[0]
         data = elf[p_offset:p_offset + p_filesz]
         offset = len(out)
