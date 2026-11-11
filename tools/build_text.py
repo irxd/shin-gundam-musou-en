@@ -9,7 +9,8 @@ import argparse, math, re, struct, sys, collections
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from linkdata import LinkData, write_linkdata
-from textwrap_vita import Metrics, fixup, box_of
+from text_short import SHORT
+from textwrap_vita import Metrics, fixup, box_of, BATTLE_TAG, SCALE_BASE, SCALE_MIN
 
 METRICS = None    # set in main(); None disables wrapping
 
@@ -31,6 +32,11 @@ def english(tp, tv, st, box=None, table=False, measured=False):
     if table:
         s = TABLE_OVERRIDES.get(s, s)
     check_format(s, tv)
+    tag = BATTLE_TAG.match(s)
+    head = tag.group() if tag else ''
+    s = head + SHORT.get(re.sub(r' *\n *', ' ', s[len(head):]), s[len(head):])     # text_short.py
+    if METRICS and box == BANNER:
+        return banner(s).encode('utf-8')
     if METRICS and box:
         ja = tv.decode('utf-8', 'replace')
         lim, lines, grow, fixed = (tuple(box) + (True, False)[len(box) - 2:])[:4]
@@ -39,7 +45,7 @@ def english(tp, tv, st, box=None, table=False, measured=False):
                 return s.encode('utf-8')
             if not measured:
                 lim = max(lim, METRICS.line_width(ja, 5.0))
-        if measured or '\n' in ja or METRICS.width(ja, 5.0) <= lim:  # shown in that box (not a one-line view)
+        if measured or box is PANEL or '\n' in ja or METRICS.width(ja, 5.0) <= lim:  # shown in that box
             # measured boxes: a button icon ([BTN][NAME]) is drawn about one glyph wide; stand-in chars
             # (unknown to the metrics = 1.0 unit) while wrapping
             icons = BTN.findall(s) if measured else []
@@ -56,6 +62,42 @@ def english(tp, tv, st, box=None, table=False, measured=False):
     return s.encode('utf-8')
 
 BTN = re.compile(r'\[BTN\]\[[A-Z0-9_]+\]')
+
+# Battle messages ('（吉味）...', see textwrap_vita.BATTLE_TAG) show in the banner in the middle of the screen.
+# The banner is one line tall and draws a second line below it, left-aligned (seen on hardware), so they
+# must stay on one line. The game breaks the text itself (scaled width: the breaker reads our scale
+# marker) at about 22 units, widened to 26 by the patched eboot (build_font.py BANNER_BREAK); the banner
+# holds about 27 between its arrows. Long messages are shrunk to fit 25 units (and shortened in
+# text_short.py when even half size is not enough).
+# Orders ('（指示）') show in the green banner and also become the mission panel's objective: they are
+# banner text too (one line); the panel (16.5 units wide x 2 lines) breaks the line itself, at the same scale.
+# The other strings of those tables are mission objectives shown in the panel only.
+BANNER = 'banner'
+BANNER_W = 25.0
+PANEL = (16.5, 2)
+
+
+def banner(s):
+    tag = BATTLE_TAG.match(s)
+    head, body = (tag.group(), s[tag.end():]) if tag else ('', s)
+    one = re.sub(r' *\n *', ' ', body)
+    w = METRICS.width(one)
+    if w <= BANNER_W:
+        return head + one
+    # never a line break of ours: past half size (the smallest scale), the [n:NAME] estimate may be too
+    # high anyway; if the real text is still too wide, the game breaks it at half pitch (one line tall)
+    return head + '\x1b' + chr(SCALE_BASE + max(SCALE_MIN, int(BANNER_W * 32 / w))) + one
+
+
+def strtab_boxes(strings):
+    """Wrap box per string of a string table (Japanese bytes)."""
+    ja = [x.decode('utf-8', 'replace') for x in strings]
+    if not METRICS:
+        return [None] * len(ja)
+    if any(BATTLE_TAG.match(s) for s in ja):    # battle messages + mission objectives
+        return [BANNER if BATTLE_TAG.match(s) else PANEL for s in ja]
+    box = box_of(METRICS, ja)
+    return [box] * len(ja)
 
 PRINTF = re.compile(r'%[-+ #0]*\d*(?:\.\d+)?(?:hh|h|ll|l)?[diouxXcsfFeEgGp]')
 
@@ -172,6 +214,10 @@ def build_table(tid, recs, e='<'):
 TABLE_OVERRIDES = {
     # short labels too wide for their Vita slot
     'Regular Network Connection': 'Network Connection',     # Options label; auto-shrunk to unreadable
+    # %s is a suit name: the pre-wrap guesses its width, and with long names the popup wrapped the line again
+    # itself ('Selection' alone on a second line, 'screen.' on a third); break right after the name instead
+    'You can now select [g]%s[/] from the Mobile Suit Selection screen.':
+        'You can now select [g]%s[/]\nfrom the Mobile Suit Selection screen.',
     # printf formats whose PS3 text has the arguments in another order than the Vita eboot passes them
     # (Japanese: name %s first, then count %d). Swapped order crashed the game on the reward popup.
     '[g]%d[/] of material item [g]%s[/] obtained.':
@@ -226,6 +272,35 @@ TABLE_MEASURED = {
 # Japanese has none, they are dropped (the Vita breaks elsewhere, which left short lines).
 TABLE_JOIN = {10}       # character descriptions (Database > Characters)
 
+# Field names (table 5, 256 records; also filled into battle messages as [n:FLD]). The battle HUD shows the
+# current field's name in a fixed slot with an icon at about 9.5 width units, which covered the end of long
+# PS3 names ('Space Battle Airs[icon]ce B'). These are shortened to fit (widest result 9.35 units).
+FIELD_TABLE = (5, 256)
+FIELD_SHORT = [
+    (r'^(Solomon|Axis|Gryps 2|Laplace) Airspace', r'\1 Space'),
+    (r'^(Space|Sea|Air) Battle Airspace', r'\1 Zone'),
+    (r'^Fortress Interior', 'Inner Fortress'),
+    (r'^Residential Zone', 'Residential'),
+    (r'^(\d(?:st|nd|rd|th)) Protective Line', r'\1 Alert Line'),
+    (r'^(East|West|South|North) (\d)(?:st|nd|rd) ?Defense Point', r'\1 Defense \2'),
+    (r'^(East|West|South|North) Defense Point', r'\1 Defense'),
+    (r'^(\d(?:st|nd|rd|th)) Defense Point', r'\1 Def. Point'),
+    (r'^Allied Comm Facility$', 'Allied Comms'),
+    (r'^Enemy Comm Facility$', 'Enemy Comms'),
+    (r'^Mobile Suit Factory$', 'MS Factory'),
+    (r'^Final Defense Line$', 'Final Line'),
+    (r'^Orb National Defense HQ$', 'Orb Defense HQ'),
+    (r'^Team Assist Point$', 'Assist Point'),
+    (r'^Odessa Base Command Center$', 'Odessa HQ'),
+]
+
+
+def short_field_name(b):
+    s = b.decode('utf-8')
+    for pat, rep in FIELD_SHORT:
+        s = re.sub(pat, rep, s)
+    return s.encode('utf-8')
+
 # Story box width, measured on hardware (the Japanese lines leave room at the right). section -> units
 STORY_WIDTH = {2: 28.0}     # narration box: ~455 px usable (stops short of the next-page arrow)
 
@@ -273,6 +348,10 @@ def port_table(dv, dp, st):
     for k, (rv, rp) in enumerate(zip(tv[1], tp[1])):
         if rp.strip(b'\0') and rp != rv:   # PS3 has real text here
             b = measured or override(rv.decode('utf-8', 'replace')) or box
+            if (tv[0], len(tv[1])) == FIELD_TABLE:
+                new = short_field_name(rp)
+                st['table: field names shortened'] += new != rp
+                rp = new
             if tv[0] in TABLE_JOIN:
                 b = None                    # the game wraps these
                 if b'\n' not in rv:
@@ -297,8 +376,7 @@ def port_node(dv, dp, st, skipped, path):
             st['strtab: count mismatch (skipped)'] += 1; skipped.append((path, len(tv), len(tp)))
             return None
         st['strtab: replaced'] += 1; st['strings replaced'] += len(tp)
-        box = box_of(METRICS, [x.decode('utf-8', 'replace') for x in tv]) if METRICS else None
-        return build_strtab([english(p, v, st, box) for v, p in zip(tv, tp)])
+        return build_strtab([english(p, v, st, b) for v, p, b in zip(tv, tp, strtab_boxes(tv))])
     vs, ps = parse_sections(dv, '<'), parse_sections(dp, '>')
     if not vs or not ps or len(vs) != len(ps):
         return None

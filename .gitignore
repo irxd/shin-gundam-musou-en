@@ -13,6 +13,7 @@
 !/scripts/*.ps1
 !/scripts/*.sh
 !/scripts/*.py
+!/text/dlc/*.json
 
 # Never track these, even inside allowed folders
 __pycache__/

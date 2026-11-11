@@ -197,6 +197,14 @@ SCALE_BASE_PITCH = 0x50
 # without a box: the state is already scaled there.)
 BRK_APPLY, APPLY = 0x811d21ae, 0x811d0e8c
 EXPECT_FIT = {FIT_HOOK: 'd9f83000', BRK_APPLY: 'fef76dfe'}
+# Center banners (battle messages, orders): the text layout methods of two sibling widget classes (same
+# vtable slot, 0x811d53ac and 0x811d704a in 1.00) break the text at 480 px (`movs.w r3, #0x1e0`, the
+# breaker's width argument): about 22 units, narrower than the banner (about 27 units between its arrows).
+# The banner is one line tall (a second line hangs below it), so widen the limit to 572 px (26 units at
+# the banner's font size); build_text.py shrinks the English to fit 25 units.
+BANNER_BREAK = (0x811d56f2, 0x811d725c)
+BANNER_BREAK_PX = 572
+EXPECT_BANNER = {va: '5ff4f073' for va in BANNER_BREAK}
 
 
 def build_code(ks, sp, d, tab_lo, tab_hi, tab_ascii):
@@ -454,7 +462,9 @@ def fixed_rewrites(ks, d):
     free = [((A(PUA_CHECK) + len(pua) + 3) & ~3, A(PUA_TRIPLE)),
             ((A(LINE_CAP) + 4 + 3) & ~3, A(LINE_CAP_END)),
             (A(OVF_DEAD[0]), A(OVF_DEAD[1]))]
-    return [(A(LINE_CAP), cap), (A(PUA_CHECK), pua)], free
+    banner = [(A(va), asm(ks, f'movs.w r3, #{BANNER_BREAK_PX:#x}', A(va))) for va in BANNER_BREAK]
+    assert all(len(b) == 4 for _, b in banner)
+    return [(A(LINE_CAP), cap), (A(PUA_CHECK), pua)] + banner, free
 
 
 # ---------------------------------------------------------------- ELF
@@ -501,11 +511,26 @@ def patch_elf(elf: bytes, patches):
 
 def check_sites(elf, d):
     seg_off = lambda va: 0xa0 + va - SEG0
-    for va, hx in {**EXPECT, **EXPECT_WRAP, **EXPECT_FIT}.items():
+    for va, hx in {**EXPECT, **EXPECT_WRAP, **EXPECT_FIT, **EXPECT_BANNER}.items():
         got = elf[seg_off(va + d):seg_off(va + d) + len(hx) // 2].hex()
         if got != hx:
             return f'unexpected bytes at {va + d:#x}: {got}'
     return None
+
+
+def dlc_path(elf):
+    """The DLC loaders mount each DLC (the ownership check stays) and then list/open 'addcont0:' + folder name.
+    rePatch's reAddcont did not work for this game on hardware, so read the DLC files from app0:DLC/ instead,
+    i.e. ux0:rePatch/PCSG00278/DLC/<DLC folder>/ (tools/build_dlc.py). Only these loaders use this copy of the
+    string; the device table has its own 'addcont0:'."""
+    ctx = b'DSC\0DMS\0%s%s\0\0\0\0addcont0:\0'
+    assert elf.count(ctx) == 1, 'DLC path string not found'
+    off = elf.find(ctx) + ctx.index(b'addcont0:')
+    _, ph = segments(elf)
+    p = next(p for p in ph[:2] if p[1] <= off < p[1] + p[4])
+    new = b'app0:DLC/'
+    assert len(new) == len(b'addcont0:')
+    return [(p[2] + off - p[1], new)]
 
 
 def detect_version(elf):
@@ -551,7 +576,7 @@ def main():
     gap = ((ph[0][2] + ph[0][4] + 3) & ~3, SEG1)
     sp = Space(ks, free + [gap])
     code = build_code(ks, sp, d, t_lo, t_hi, t_ascii)
-    patches = tables + rewrites + code
+    patches = tables + rewrites + code + dlc_path(elf)
 
     # LINKDATA.C: copy + overwrite the font entry in place (same size)
     out_c = os.path.join(out_dir, 'LINKDATA_NGP', 'LINKDATA.C')
