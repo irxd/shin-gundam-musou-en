@@ -18,7 +18,7 @@ export async function sha1(blob) {
 }
 
 /**
- * Work out what a file is. Returns { kind: 'eboot' | 'LINKDATA.B' | 'LINKDATA.C' | null, entry, ok, message }.
+ * Work out what a file is. Returns { kind: 'eboot' | 'LINKDATA.B' | 'LINKDATA.C' | 'DLC' | null, entry, ok, message }.
  * `entry` is the manifest entry the file is the source for; ok=false means it can't be used (message says why).
  */
 export async function identify(file, manifest) {
@@ -43,7 +43,7 @@ export async function identify(file, manifest) {
   }
 
   if (startsWith(head, LINKDATA)) {
-    for (const e of files.filter((f) => !f.gameVersion)) {
+    for (const e of files.filter((f) => !f.gameVersion && !f.dlc)) {
       const kind = e.source.name;
       if (file.size === e.source.size) {
         if (file.size <= HASH_LIMIT) {           // LINKDATA.B: check it fully now
@@ -59,6 +59,19 @@ export async function identify(file, manifest) {
     }
     return { kind: null, ok: false, message: 'A LINKDATA file, but not LINKDATA.B or LINKDATA.C of this game.' };
   }
+
+  // DLC .BIN files (one per DLC folder): matched by size, then SHA-1
+  const dlc = files.filter((f) => f.dlc);
+  if (dlc.some((f) => f.source.size === file.size || f.target.size === file.size) && file.size <= HASH_LIMIT) {
+    const h = await sha1(file);
+    const e = dlc.find((f) => f.source.sha1 === h);
+    if (e) return { kind: 'DLC', entry: e, ok: true, message: `Decrypted DLC file ${e.source.name}.` };
+    if (dlc.some((f) => f.target.sha1 === h))
+      return { kind: 'DLC', ok: false, message: 'This DLC file is already patched. Use the original one.' };
+  }
+  if (/^(DSC|DMS)\d.*\.bin$/i.test(file.name))
+    return { kind: 'DLC', ok: false, message: 'This DLC file does not match the original (still encrypted? Copy ' +
+      'the DLC folders opened with VitaShell\'s "Open decrypted").' };
 
   if (/^linkdata\.[bc]$/i.test(file.name))
     return { kind: 'LINKDATA.' + file.name.slice(-1).toUpperCase(), ok: false,

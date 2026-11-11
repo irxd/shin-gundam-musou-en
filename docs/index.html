@@ -110,7 +110,12 @@
       <svg class="st" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><circle cx="10" cy="13" r="1.5"/><path d="m18 19-4.5-4.5L8 19"/></svg>
       <span class="label">LINKDATA.C<small></small></span><span class="meta">Choose</span>
     </button>
+    <button class="row" type="button" data-slot="DLC" title="The decrypted ux0:addcont/PCSG00278 folder, or any DLC folders in it">
+      <svg class="st" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 10v6M9 13h6"/></svg>
+      <span class="label">DLC folder<small></small></span><span class="meta">Choose folder</span>
+    </button>
     <input id="files" type="file" multiple hidden>
+    <input id="dlc-dir" type="file" webkitdirectory multiple hidden>
     <div class="sep"></div>
     <label class="row" id="zip-row">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v3M12 9v2M12 13v2"/><rect x="10.5" y="15" width="3" height="3" rx=".5"/></svg>
@@ -123,7 +128,7 @@
     </div>
     <a class="row" href="https://github.com/irxd/shin-gundam-musou-en#real-ps-vita-repatch" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
-      <span class="label">How to get these files<small>FAGDec for the eboot, VitaShell for LINKDATA</small></span>
+      <span class="label">How to get these files<small>FAGDec for the eboot, VitaShell for LINKDATA and DLC</small></span>
       <span class="meta">↗</span>
     </a>
   </section>
@@ -136,7 +141,7 @@
       <p>Use this to update files you already patched, for example when a new version changes only one file.
         The other patched files on your Vita must be from a version that works with this one: the
         <a href="https://github.com/irxd/shin-gundam-musou-en/releases" target="_blank" rel="noopener" style="text-decoration:underline">release notes</a>
-        say which files changed. New install? Choose all three files.</p>
+        say which files changed. New install? Choose all three files, plus the DLC folder if you have DLC.</p>
     </div>
   </section>
 

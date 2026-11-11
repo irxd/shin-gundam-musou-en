@@ -10,6 +10,8 @@ Needs xdelta3 (tools/bin/xdelta3.exe or on PATH) and these local inputs:
                                                           the .elf from FAGDec's decrypted SELF)
     decrypted/vita/param.sfo.orig, param_102.sfo.orig     original sce_sys/param.sfo of the game / of the update
     decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/LINKDATA.B, LINKDATA.C   PS3 EU source of the English text/images
+    decrypted/vita/addcont/PCSG00278/D*/*.BIN             decrypted DLC (VitaShell "Open decrypted" on
+                                                          ux0:addcont/PCSG00278/<folder>), all 23 DLCs
 
 Output: release/shin-gundam-musou-en-<version>/  (+ .zip)
         docs/patcher/patches/  (the same patches + manifest.json, for the web patcher on GitHub Pages)
@@ -20,6 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 VITA = ROOT / 'decrypted/vita/LINKDATA_NGP'
 PS3 = ROOT / 'decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3'
+ADDCONT = ROOT / 'decrypted/vita/addcont/PCSG00278'    # original decrypted DLC, one folder per DLC
 BUILD = ROOT / 'build/rePatch/PCSG00278'                # LINKDATA (same for every game version)
 WEB = ROOT / 'docs/patcher/patches'                     # patches served to the web patcher
 # game versions: (FAGDec dir, eboot build dir, original param.sfo, patched param.sfo, where it goes)
@@ -75,6 +78,9 @@ def main():
     py('build_images.py', PS3 / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C')
     py('build_movies.py', PS3 / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C')
     py('build_text.py', VITA / 'LINKDATA.B', PS3 / 'LINKDATA.B', BUILD / 'LINKDATA_NGP/LINKDATA.B')
+    if BUILD.joinpath('DLC').exists():
+        shutil.rmtree(BUILD / 'DLC')
+    py('build_dlc.py', ADDCONT, VITA / 'LINKDATA.B', BUILD / 'LINKDATA_NGP/LINKDATA.B', BUILD / 'DLC')
 
     # 2. xdelta: original -> patched
     out = ROOT / 'release' / f'shin-gundam-musou-en-{version}'
@@ -87,6 +93,12 @@ def main():
         (VITA / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C', 'LINKDATA.C.xdelta',
          'ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C', None),
     ]
+    # DLC: one patch per .BIN (the patched eboot reads every installed DLC from ux0:rePatch/PCSG00278/DLC/)
+    dlc = sorted(ADDCONT.glob('D*/*.BIN'))
+    assert len(dlc) == 23, f'expected the 23 DLC .BIN files in {ADDCONT}, found {len(dlc)}'
+    for src in dlc:
+        rel = f'DLC/{src.parent.name}/{src.name}'
+        pairs.append((src, BUILD / rel, f'{rel}.xdelta', f'ux0:rePatch/PCSG00278/{rel}', None))
     for v, (fag, out_v, sfo, sfo_out, sfo_dest) in GAME.items():
         pairs += [(fag / 'eboot.bin.elf', out_v / 'eboot.bin', f'eboot_v{v}.xdelta', 'ux0:rePatch/PCSG00278/eboot.bin',
                    v)]
@@ -96,6 +108,7 @@ def main():
     for src, dst, name, dest, game_version in pairs:
         # -S none: no secondary (LZMA) compression and -A: no app header, so the web patcher's small VCDIFF
         # decoder (docs/patcher/vcdiff.js) reads the same files that desktop xdelta tools apply
+        (out / 'patches' / name).parent.mkdir(parents=True, exist_ok=True)
         run(xdelta, '-e', '-9', '-S', 'none', '-A', '-f', '-s', src, dst, out / 'patches' / name)
         check = out / 'verify.tmp'      # round trip: the patch must recreate our file exactly
         run(xdelta, '-d', '-f', '-s', src, out / 'patches' / name, check)
@@ -103,7 +116,7 @@ def main():
         check.unlink()
         assert ok, f'{name}: applying the patch does not reproduce {dst}'
         lines.append(f'{name:24} source sha1 {sha1(src)}  ->  {dest}  sha1 {sha1(dst)}')
-        manifest.append({'patch': name, 'gameVersion': game_version,
+        manifest.append({'patch': name, 'gameVersion': game_version, 'dlc': name.startswith('DLC/'),
                          'source': {'name': 'eboot.bin.elf' if game_version else src.name,
                                     'size': src.stat().st_size, 'sha1': sha1(src)},
                          'target': {'path': dest.removeprefix('ux0:'), 'size': dst.stat().st_size,
@@ -113,8 +126,9 @@ def main():
     if WEB.exists():
         shutil.rmtree(WEB)
     WEB.mkdir(parents=True)
-    for p in (out / 'patches').iterdir():
-        shutil.copy(p, WEB / p.name)
+    for p in (out / 'patches').rglob('*.xdelta'):
+        (WEB / p.relative_to(out / 'patches')).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(p, WEB / p.relative_to(out / 'patches'))
     (WEB / 'manifest.json').write_text(json.dumps({'version': version, 'files': manifest}, indent=2) + '\n',
                                        encoding='utf-8')
 
@@ -124,8 +138,8 @@ def main():
             if p.is_file():
                 z.write(p, p.relative_to(out.parent))
     print('\n'.join(lines))
-    for p in sorted((out / 'patches').iterdir()):
-        print(f'{p.name:20} {p.stat().st_size:>12,} bytes')
+    for p in sorted((out / 'patches').rglob('*.xdelta')):
+        print(f'{p.relative_to(out / "patches").as_posix():50} {p.stat().st_size:>12,} bytes')
     print('wrote', zpath)
 
 

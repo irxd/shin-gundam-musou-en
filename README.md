@@ -22,9 +22,10 @@ The patch is a set of small **xdelta** files that you apply to files from **your
 data is included.
 
 ### Quickest way (real Vita):
-1. Get your decrypted `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C` from the Vita (steps 1 and 2 below).
+1. Get your decrypted `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C` from the Vita (steps 1 and 2 below),
+   and your decrypted DLC folder if you have DLC installed.
 2. Open the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** (experimental), choose the
-   three files and press **Patch**.
+   three files (and the DLC folder) and press **Patch**.
 3. Copy the `rePatch` folder it gives you to `ux0:` on the Vita, and start the game.
 
 ### You need
@@ -62,12 +63,18 @@ First check which version you have: **1.00** (no update) or **1.02** (the update
 2. **Copy the decrypted data files** (both versions): in VitaShell, go to `ux0:app/PCSG00278/`, open the
    folder with *Open decrypted* (△ menu), and copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to
    your PC. `LINKDATA.C` is about 1 GB.
+
+   **If you have DLC installed** (`ux0:addcont/PCSG00278/` exists), copy it too: in VitaShell, go to
+   `ux0:addcont/PCSG00278/`, open each DLC folder (`DSC…` and `DMS…`) with *Open decrypted* and copy its `.BIN`
+   file to your PC, keeping the folder names (for example `PCSG00278/DSC0000000000000/DSC_000.BIN`). About 53 MB
+   for all 23. This is required: the patched eboot reads the DLC from `ux0:rePatch/PCSG00278/DLC/`, so a DLC
+   whose patched files are missing there won't load.
 3. **Apply the patch** on your PC. Choose one:
 
    **Option A: web patcher** (easiest, experimental)
    1. Open the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** in desktop Chrome or Edge.
-   2. Choose (or drop) your `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C`. It detects your game version and
-      checks every file.
+   2. Choose (or drop) your `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C`. If you have DLC, also choose (or
+      drop) your DLC folder with **DLC folder**. It detects your game version and checks every file.
    3. Press **Patch**. You get the finished `rePatch` folder, saved into a folder you pick or as a zip.
 
    Everything runs in your browser; nothing is uploaded. If it doesn't work for you, use option B.
@@ -86,6 +93,7 @@ First check which version you have: **1.00** (no update) or **1.02** (the update
       | `eboot.bin.elf`, version 1.02 | `patches/eboot_v1.02.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
       | `LINKDATA.B` | `patches/LINKDATA.B.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
       | `LINKDATA.C` | `patches/LINKDATA.C.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
+      | DLC: `<folder>/<file>.BIN` | `patches/DLC/<folder>/<file>.BIN.xdelta` | `ux0:rePatch/PCSG00278/DLC/<folder>/<file>.BIN` |
 
    > **Note:** *Delta Patcher* overwrites the file you select unless *Backup original file* is ticked. Keep an
    > unpatched copy of each file (or tick the backup option) in case you need it again, for example for a future
@@ -96,6 +104,7 @@ First check which version you have: **1.00** (no update) or **1.02** (the update
    ux0:rePatch/PCSG00278/eboot.bin
    ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B
    ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C
+   ux0:rePatch/PCSG00278/DLC/<DLC folder>/<file>.BIN     (only if you have DLC; one folder per installed DLC)
    ```
 
 Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePatch/PCSG00278/`.
@@ -112,16 +121,19 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 4. Put the patched LINKDATA files into `ux0/app/PCSG00278/LINKDATA_NGP/`, replacing the originals. Put the
    patched `eboot.bin` into `ux0/app/PCSG00278/` (1.00), or into `ux0/patch/PCSG00278/` if the 1.02 update
    is installed in Vita3K.
+5. DLC (if installed in Vita3K): patch the `.BIN` files from `<Vita3K data>/ux0/addcont/PCSG00278/` and put them
+   into `ux0/app/PCSG00278/DLC/<DLC folder>/` (the patched eboot reads the DLC from `app0:DLC/`). Not tested in
+   Vita3K yet.
 
 ## Known issues
 
 - Some menu and table lines are still in Japanese: about 780 lines the PS3 release left blank, and 5 tables
   whose line counts differ between the two versions.
 - Some images with Japanese text remain, such as parts of menu screens and one tutorial picture (the network menu, Japanese on PS3 too).
-- DLC (the extra scenarios and mobile suits) is not translated yet and hasn't been tested with the patch.
-  The patch doesn't change any DLC files; DLC scenario text will most likely show in Japanese. Planned for a
-  later version.
-- Long lines in story and battle text boxes are drawn in a smaller font so that they fit.
+- With DLC installed, the patched DLC files are required (see step 2): the patched eboot reads every installed
+  DLC from `ux0:rePatch/PCSG00278/DLC/`. rePatch's own DLC support (reAddcont) didn't work for this game.
+- Long lines in story and battle text boxes are drawn in a smaller font so that they fit. Center banners
+  (mission messages) are always one line; very long lines in the English release were shortened to fit.
 - The game's name on the home screen stays 真・ガンダム無双. Changing it via `param.sfo` did not update the
   LiveArea in testing; a fix is planned for a later version.
 - Tested on a real PS Vita (1.02, via rePatch) and in Vita3K (1.00 and 1.02). Please report problems.
@@ -139,7 +151,7 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 | Game name on the home screen | ⏳ Still Japanese (planned) |
 | ~780 lines the PS3 release left blank, 5 tables with different line counts | ⏳ Still Japanese |
 | Other images with Japanese text (e.g. parts of menu screens) | ⏳ To do |
-| DLC (16 extra scenarios, 4 extra mobile suits) | ⏳ Planned for a later version |
+| DLC (17 extra scenarios, 6 extra mobile suit packs) | ✅ Official English where the text matches the base game; the rest is a new fan translation |
 
 ## Screenshots
 
@@ -178,6 +190,8 @@ Requirements: Windows, Python 3.10+ with Pillow and keystone-engine, 7-Zip and x
 - FAGDec output `eboot.bin.elf` + `self_auth.bin` → `PCSG00278_100/` (game 1.00) and `PCSG00278_102/`
   (update 1.02; `python -P tools/unfself.py eboot.bin eboot.bin.elf` turns FAGDec's decrypted SELF into the ELF)
 - PS3 `LINKDATA_PS3/LINKDATA.B` and `.C` extracted from the ISO with 7-Zip → `decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/`
+- all 23 DLC folders, decrypted (VitaShell *Open decrypted* on each folder of `ux0:addcont/PCSG00278/`) →
+  `decrypted/vita/addcont/PCSG00278/<DLC folder>/`
 
 Then:
 
@@ -186,8 +200,9 @@ python -P scripts/make_release.py 0.5.0
 ```
 
 This builds the patched eboot (fself, one per game version), `LINKDATA.B` (text) and `LINKDATA.C` (font + images) into
-`build/`, creates xdelta patches, verifies they round-trip, and writes `release/…zip`. The individual steps are
-`tools/build_font.py`, `tools/build_images.py`, `tools/build_movies.py` and `tools/build_text.py`.
+`build/`, the English DLC files into `build/rePatch/PCSG00278/DLC/`, creates xdelta patches, verifies they round-trip,
+and writes `release/…zip`. The individual steps are `tools/build_font.py`, `tools/build_images.py`,
+`tools/build_movies.py`, `tools/build_text.py` and `tools/build_dlc.py`.
 
 ## How it works
 
@@ -232,9 +247,13 @@ PS3 line is blank or the counts differ, it keeps the Japanese original.
 ```
 tools/linkdata.py        LINKDATA reader / writer
 tools/build_text.py      English LINKDATA.B (text port, story scenes, pre-wrapping)
+tools/text_short.py      shorter English for lines that would otherwise shrink a lot (banners, story, dialogue)
+tools/build_dlc.py       English DLC files (scenarios + mobile suit packs), from text/dlc/*.json
+text/dlc/                DLC translations: sha1(Japanese)[:10] -> English (no Japanese game text in the repo)
 tools/story.py           story/event scene format (entry 171)
 tools/textwrap_vita.py   line breaking + per-string text scale markers
-tools/build_font.py      font atlas widths + eboot hooks (proportional text, word wrap, scale) -> fself
+tools/build_font.py      font atlas widths + eboot hooks (proportional text, word wrap, scale, DLC path,
+                         wider center banners) -> fself
 tools/build_images.py    English textures from the PS3 release (buttons, title cards, logos, notice)
 tools/build_movies.py    English subtitles for the video cutscenes (LINKDATA.C, PS3 English slot -> Vita Japanese slot)
 tools/build_sfo.py       English game name in param.sfo (experimental, not in the release yet)
