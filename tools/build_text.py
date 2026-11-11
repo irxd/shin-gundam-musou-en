@@ -14,6 +14,51 @@ from textwrap_vita import Metrics, fixup, box_of, BATTLE_TAG, SCALE_BASE, SCALE_
 
 METRICS = None    # set in main(); None disables wrapping
 
+# Lines the PS3 English has no text for (blank table records, '......' battle text): the official English of
+# the same Japanese elsewhere in the game (OFFICIAL, from a first pass), else our own translations in
+# text/base/*.json, sha1(Japanese utf-8)[:10] -> English (no Japanese game text in the repo). Our own
+# translations also replace a PS3 line where that line is wrong (e.g. names in the wrong placeholder).
+OWN, OFFICIAL, OWN_USED = {}, {}, set()
+JP = re.compile(rb'[\xe3-\xe9][\x80-\xbf]{2}')
+KANA_KANJI = re.compile(rb'\xe3[\x81-\x83][\x80-\xbf]|[\xe4-\xe9][\x80-\xbf]{2}')
+TAG = re.compile(rb'\xef\xbc\x88.{6}\xef\xbc\x89', re.S)                       # battle tag, e.g. （指示）
+DOTS = re.compile(rb'(\xef\xbc\x88.{6}\xef\xbc\x89)?(\.|\xe2\x80\xa6|\xe3\x83\xbb)*', re.S)     # [tag] '...', '…', '・'
+
+
+def no_text(en, ja):
+    """PS3 line with nothing to use: blank, '......' for a real Japanese line, or itself Japanese (the PS3
+    table 18 holds a Japanese character list where the Vita one has skill descriptions)."""
+    e = en.strip(b'\0')
+    return not e or (DOTS.fullmatch(e) and not DOTS.fullmatch(ja)) or bool(KANA_KANJI.search(TAG.sub(b'', e, 1)))
+
+
+def load_own(text_dir):
+    import json
+    for f in sorted(Path(text_dir).glob('*.json')):
+        for k, v in json.load(open(f, encoding='utf-8')).items():
+            assert OWN.get(k, v) == v, f'{f.name}: {k} translated differently elsewhere'
+            OWN[k] = v.encode('utf-8')
+
+
+def own(ja):
+    import hashlib
+    k = hashlib.sha1(ja).hexdigest()[:10]
+    if k in OWN:
+        OWN_USED.add(k)
+        return OWN[k]
+    return None
+
+
+def fill(ja, en):
+    """English for a Japanese line: our fix, the PS3 line, or (PS3 blank/'......') a fallback. None: keep it."""
+    if (f := own(ja)) is not None:
+        return f
+    if not no_text(en, ja):
+        return en
+    if JP.search(ja) and ja in OFFICIAL:
+        return OFFICIAL[ja]
+    return ja if KANA_KANJI.search(en) else None     # never a Japanese PS3 line: keep the Vita one
+
 
 TABLE_SENTENCE = 12.0    # table records at least this wide (in Japanese) are sentences -> may be wrapped
 
@@ -346,6 +391,9 @@ def port_table(dv, dp, st):
     measured = TABLE_MEASURED.get(tv[0])
     pad = TABLE_PAD.get(tv[0], {})
     for k, (rv, rp) in enumerate(zip(tv[1], tp[1])):
+        if (f := fill(rv, rp)) is not None and f is not rp:
+            st['table: own/official English filled in'] += 1
+            rp = f
         if rp.strip(b'\0') and rp != rv:   # PS3 has real text here
             b = measured or override(rv.decode('utf-8', 'replace')) or box
             if (tv[0], len(tv[1])) == FIELD_TABLE:
@@ -372,10 +420,17 @@ def port_node(dv, dp, st, skipped, path):
     """Recursively port a section container / string table. Returns new bytes or None if unchanged."""
     tv, tp = parse_strtab(dv, '<'), parse_strtab(dp, '>')
     if tv is not None and tp is not None:
+        # some PS3 tables only add filler lines at the end (blank, '......', DUMMY): the rest matches line by line
+        if len(tp) > len(tv) and all(x.strip(b'.') in (b'', b'DUMMY') for x in tp[len(tv):]):
+            st['strtab: PS3 filler tail dropped'] += 1
+            tp = tp[:len(tv)]
         if len(tv) != len(tp):
             st['strtab: count mismatch (skipped)'] += 1; skipped.append((path, len(tv), len(tp)))
             return None
         st['strtab: replaced'] += 1; st['strings replaced'] += len(tp)
+        filled = [fill(v, p) for v, p in zip(tv, tp)]
+        st['strtab: own/official English filled in'] += sum(f is not None and f is not p for f, p in zip(filled, tp))
+        tp = [p if f is None else f for f, p in zip(filled, tp)]
         return build_strtab([english(p, v, st, b) for v, p, b in zip(tv, tp, strtab_boxes(tv))])
     vs, ps = parse_sections(dv, '<'), parse_sections(dp, '>')
     if not vs or not ps or len(vs) != len(ps):
@@ -434,12 +489,47 @@ def port_story(dv, dp, st):
     return build_c(out)
 
 
+def official_pairs(blobs, p):
+    """Japanese -> PS3 English for every line with real PS3 text (tables and string tables, first one wins)."""
+    out = {}
+
+    def add(pairs):
+        for ja, en in pairs:
+            e = en.strip(b'\0')
+            if en != ja and JP.search(ja) and not no_text(en, ja):
+                out.setdefault(ja, en)
+
+    def walk(dv, dp):
+        tv, tp = parse_strtab(dv, '<'), parse_strtab(dp, '>')
+        if tv is not None and tp is not None:
+            add(zip(tv, tp) if len(tv) <= len(tp) else ())
+            return
+        vs, ps = parse_sections(dv, '<'), parse_sections(dp, '>')
+        if vs and ps and len(vs) == len(ps):
+            for x, y in zip(vs, ps):
+                walk(x, y)
+
+    for i in range(PS3_SHIFT_FROM, len(blobs)):
+        dv, dp = blobs[i], p.read(i + PS3_SHIFT)
+        if i == STORY_ENTRY:
+            continue
+        if (tv := parse_table(dv, '<')):
+            tp = parse_table(dp, '>')
+            if tp and tv[0] == tp[0] and len(tv[1]) == len(tp[1]):
+                add(zip(tv[1], tp[1]))
+        elif parse_sections(dv, '<') and parse_sections(dp, '>'):
+            walk(dv, dp)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('vita_b'); ap.add_argument('ps3_b'); ap.add_argument('out')
     ap.add_argument('--only', type=int, nargs='*', help='only patch these Vita entry indices')
     ap.add_argument('--widths', default=str(Path(__file__).parent.parent / 'build' / 'ascii_widths.json'),
                     help='ASCII glyph widths written by build_font.py (wrapping is skipped if missing)')
+    ap.add_argument('--text', default=str(Path(__file__).parent.parent / 'text' / 'base'),
+                    help='own translations for lines the PS3 English has no text for')
     a = ap.parse_args()
     global METRICS
     if Path(a.widths).exists():
@@ -450,6 +540,9 @@ def main():
     v, p = LinkData(a.vita_b), LinkData(a.ps3_b)
     blobs = [v.read(i) for i in range(len(v))]
     st = collections.Counter(); skipped = []
+    load_own(a.text)
+    OFFICIAL.update(official_pairs(blobs, p))
+    print(f'{len(OWN)} own translations, {len(OFFICIAL)} official Japanese -> English pairs')
     for i in range(PS3_SHIFT_FROM, len(v)):
         if a.only and i not in a.only:
             continue
@@ -477,6 +570,9 @@ def main():
         print(f'{k:36} {n}')
     for s in skipped[:20]:
         print('  skipped (entry, section, vita_n, ps3_n):', s)
+    unused = set(OWN) - OWN_USED
+    if unused:
+        print(f'warning: {len(unused)} own translations not used (Japanese changed?): {sorted(unused)[:5]}')
     print('wrote', a.out)
 
 

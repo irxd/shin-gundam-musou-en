@@ -6,10 +6,10 @@ The game was released in the West only on PS3, as *Dynasty Warriors: Gundam Rebo
 **official English localization** from the PS3 release onto the Japanese Vita release. Both versions run on the same
 engine and use the same data layout.
 
-> **Status: playable in English (v0.5.0, early test release; game versions 1.00 and 1.02).** Tested on a real
+> **Status: fully playable in English (v0.5.0; game versions 1.00 and 1.02).** Tested on a real
 > PS Vita and in Vita3K.
 >
-> **Patch it in your browser with the [web patcher](https://irxd.github.io/shin-gundam-musou-en/)** (new, experimental), or download the patch files
+> **Patch it in your browser with the [web patcher](https://irxd.github.io/shin-gundam-musou-en/)** or download the patch files
 > from the [Releases](https://github.com/irxd/shin-gundam-musou-en/releases) page and use Delta Patcher. See [Installation](#installation).
 
 <p align="center"><img src="docs/screenshots/05-story-dialogue.png" width="420" alt="Story scene with English dialogue, on a PS Vita"> <img src="docs/screenshots/08-battle-dialogue.png" width="420" alt="Battle with English dialogue and mission, on a PS Vita"></p>
@@ -24,7 +24,7 @@ data is included.
 ### Quickest way (real Vita):
 1. Get your decrypted `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C` from the Vita (steps 1 and 2 below),
    and your decrypted DLC folder if you have DLC installed.
-2. Open the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** (experimental), choose the
+2. Open the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)**, choose the
    three files (and the DLC folder) and press **Patch**.
 3. Copy the `rePatch` folder it gives you to `ux0:` on the Vita, and start the game.
 
@@ -39,7 +39,7 @@ data is included.
   - **VitaShell**, to copy files between the Vita and your PC.
 - **For [Vita3K](https://vita3k.org/):** the game installed in Vita3K. Its files are already decrypted.
 - **To apply the patch**, one of:
-  - the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** in desktop Chrome or Edge (easiest, experimental), or
+  - the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** in desktop Chrome or Edge (easiest), or
   - **[Delta Patcher](https://github.com/marco-calautti/DeltaPatcher/releases)** with the patch files from
     [Releases](https://github.com/irxd/shin-gundam-musou-en/releases). Other xdelta3 tools should also work, but Delta Patcher is the one that was tested.
 
@@ -71,7 +71,7 @@ First check which version you have: **1.00** (no update) or **1.02** (the update
    whose patched files are missing there won't load.
 3. **Apply the patch** on your PC. Choose one:
 
-   **Option A: web patcher** (easiest, experimental)
+   **Option A: web patcher** (easiest)
    1. Open the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** in desktop Chrome or Edge.
    2. Choose (or drop) your `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C`. If you have DLC, also choose (or
       drop) your DLC folder with **DLC folder**. It detects your game version and checks every file.
@@ -127,9 +127,11 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 
 ## Known issues
 
-- Some menu and table lines are still in Japanese: about 780 lines the PS3 release left blank, and 5 tables
-  whose line counts differ between the two versions.
-- Some images with Japanese text remain, such as parts of menu screens and one tutorial picture (the network menu, Japanese on PS3 too).
+- Some images still have Japanese text, such as parts of menu screens and one tutorial picture (the network
+  menu, which is Japanese on PS3 too). These stay as they are.
+- Lines the PS3 release has no English for (blank, or "......") use the official English of the same line
+  elsewhere in the game, or a new fan translation (`text/base/`). Only unused developer placeholders
+  (ダミー and the like) are left in Japanese.
 - With DLC installed, the patched DLC files are required (see step 2): the patched eboot reads every installed
   DLC from `ux0:rePatch/PCSG00278/DLC/`. rePatch's own DLC support (reAddcont) didn't work for this game.
 - Long lines in story and battle text boxes are drawn in a smaller font so that they fit. Center banners
@@ -149,8 +151,8 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 | Font | ✅ Proportional English text with word wrap; long lines shrink to fit their box |
 | Images: YES/NO/OK buttons, chapter title cards, boot notice & logo, title screen, tutorial pictures | ✅ |
 | Game name on the home screen | ⏳ Still Japanese (planned) |
-| ~780 lines the PS3 release left blank, 5 tables with different line counts | ⏳ Still Japanese |
-| Other images with Japanese text (e.g. parts of menu screens) | ⏳ To do |
+| Lines the PS3 release left blank or "......" (menu help, partner skills, battle messages, music titles…) | ✅ Official English from elsewhere in the game, the rest a new fan translation |
+| Other images with Japanese text (e.g. parts of menu screens) | ➖ Not planned (known limitation) |
 | DLC (17 extra scenarios, 6 extra mobile suit packs) | ✅ Official English where the text matches the base game; the rest is a new fan translation |
 
 ## Screenshots
@@ -248,6 +250,7 @@ PS3 line is blank or the counts differ, it keeps the Japanese original.
 tools/linkdata.py        LINKDATA reader / writer
 tools/build_text.py      English LINKDATA.B (text port, story scenes, pre-wrapping)
 tools/text_short.py      shorter English for lines that would otherwise shrink a lot (banners, story, dialogue)
+text/base/               base-game lines with no PS3 English: sha1(Japanese)[:10] -> English
 tools/build_dlc.py       English DLC files (scenarios + mobile suit packs), from text/dlc/*.json
 text/dlc/                DLC translations: sha1(Japanese)[:10] -> English (no Japanese game text in the repo)
 tools/story.py           story/event scene format (entry 171)
