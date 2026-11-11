@@ -109,6 +109,18 @@ First check which version you have: **1.00** (no update) or **1.02** (the update
 
 Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePatch/PCSG00278/`.
 
+5. **Optional: English game name on the home screen.** The home screen takes the name from the system's app
+   database, not from the game files, so this edits that database (only the game's 5 name entries). It needs
+   Python 3 on your PC.
+   1. Don't install or delete apps on the Vita until you've finished these steps.
+   2. In VitaShell, copy `ur0:shell/db/app.db` to your PC.
+   3. Run `python tools/rename_title.py app.db` (`tools/` is in the release zip). It saves the original as
+      `app.db.orig` first.
+   4. Copy the changed `app.db` back to `ur0:shell/db/app.db`, replacing it, and restart the Vita.
+
+   To undo: copy `app.db.orig` back as `ur0:shell/db/app.db` and restart. Reinstalling the game, or
+   rebuilding the database, also brings the Japanese name back.
+
 ### Vita3K
 
 1. Find the installed game at `<Vita3K data>/ux0/app/PCSG00278/`. Back up `eboot.bin` and
@@ -124,6 +136,8 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 5. DLC (if installed in Vita3K): patch the `.BIN` files from `<Vita3K data>/ux0/addcont/PCSG00278/` and put them
    into `ux0/app/PCSG00278/DLC/<DLC folder>/` (the patched eboot reads the DLC from `app0:DLC/`). Not tested in
    Vita3K yet.
+6. Optional, English game name in the game list: run `python tools/rename_title.py <Vita3K data>/ux0/app/PCSG00278/sce_sys/param.sfo`
+   (and the same for `ux0/patch/PCSG00278/sce_sys/param.sfo` if the 1.02 update is installed there), then restart Vita3K.
 
 ## Known issues
 
@@ -136,9 +150,10 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
   DLC from `ux0:rePatch/PCSG00278/DLC/`. rePatch's own DLC support (reAddcont) didn't work for this game.
 - Long lines in story and battle text boxes are drawn in a smaller font so that they fit. Center banners
   (mission messages) are always one line; very long lines in the English release were shortened to fit.
-- The game's name on the home screen stays 真・ガンダム無双. Changing it via `param.sfo` did not update the
-  LiveArea in testing; a fix is planned for a later version.
-- Tested on a real PS Vita (1.02, via rePatch) and in Vita3K (1.00 and 1.02). Please report problems.
+- The game's name on the home screen stays 真・ガンダム無双 unless you do the optional step 5 (it edits the
+  system's app database; rePatch can't change it).
+- Tested on a real PS Vita (1.02, via rePatch), in Vita3K (1.00 and 1.02) and in Vita3K+ 1.4 (1.00).
+  Please report problems.
 
 ## What's translated
 
@@ -150,7 +165,7 @@ Nothing in `ux0:app` or `ux0:patch` is changed. **Uninstall:** delete `ux0:rePat
 | Video cutscene subtitles | ✅ 420 lines (42 cutscenes) |
 | Font | ✅ Proportional English text with word wrap; long lines shrink to fit their box |
 | Images: YES/NO/OK buttons, chapter title cards, boot notice & logo, title screen, tutorial pictures | ✅ |
-| Game name on the home screen | ⏳ Still Japanese (planned) |
+| Game name on the home screen | ✅ Optional step (`tools/rename_title.py`) |
 | Lines the PS3 release left blank or "......" (menu help, partner skills, battle messages, music titles…) | ✅ Official English from elsewhere in the game, the rest a new fan translation |
 | Other images with Japanese text (e.g. parts of menu screens) | ➖ Not planned (known limitation) |
 | DLC (17 extra scenarios, 6 extra mobile suit packs) | ✅ Official English where the text matches the base game; the rest is a new fan translation |
@@ -188,7 +203,7 @@ Requirements: Windows, Python 3.10+ with Pillow and keystone-engine, 7-Zip and x
 
 - decrypted Vita `LINKDATA_NGP/LINKDATA.B` and `.C` → `decrypted/vita/LINKDATA_NGP/`
   (Vita3K install, or VitaShell *Open decrypted*), original `sce_sys/param.sfo` → `decrypted/vita/param.sfo.orig`
-  (and the update's → `decrypted/vita/param_102.sfo.orig`; only for the experimental `tools/build_sfo.py`)
+  (and the update's → `decrypted/vita/param_102.sfo.orig`; not needed for the release)
 - FAGDec output `eboot.bin.elf` + `self_auth.bin` → `PCSG00278_100/` (game 1.00) and `PCSG00278_102/`
   (update 1.02; `python -P tools/unfself.py eboot.bin eboot.bin.elf` turns FAGDec's decrypted SELF into the ELF)
 - PS3 `LINKDATA_PS3/LINKDATA.B` and `.C` extracted from the ISO with 7-Zip → `decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/`
@@ -259,7 +274,8 @@ tools/build_font.py      font atlas widths + eboot hooks (proportional text, wor
                          wider center banners) -> fself
 tools/build_images.py    English textures from the PS3 release (buttons, title cards, logos, notice)
 tools/build_movies.py    English subtitles for the video cutscenes (LINKDATA.C, PS3 English slot -> Vita Japanese slot)
-tools/build_sfo.py       English game name in param.sfo (experimental, not in the release yet)
+tools/build_sfo.py       English game name in param.sfo (used by rename_title.py)
+tools/rename_title.py    optional: English game name in app.db (real Vita) or param.sfo (Vita3K)
 tools/unfself.py         decrypted SELF (FAGDec) -> ELF
 tools/g1t*.py, dxt.py    G1T texture decoding / DXT5 encoding
 tools/re/                reverse-engineering helpers for the eboot

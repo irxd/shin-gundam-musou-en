@@ -122,6 +122,10 @@ def main():
                          'target': {'path': dest.removeprefix('ux0:'), 'size': dst.stat().st_size,
                                     'sha1': sha1(dst)}})
     (out / 'checksums.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    # optional English game name (README step 5): the script and the module it uses
+    (out / 'tools').mkdir()
+    for name in ('rename_title.py', 'build_sfo.py'):
+        shutil.copy(ROOT / 'tools' / name, out / 'tools' / name)
 
     if WEB.exists():
         shutil.rmtree(WEB)
