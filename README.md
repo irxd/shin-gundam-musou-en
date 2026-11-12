@@ -46,18 +46,36 @@ Playing on Vita3K instead? See [Vita3K](#vita3k).
 1. Go to `ux0:app/PCSG00278/`, press △ and choose **Open decrypted**.
 2. Copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to your PC. (`LINKDATA.C` is about 1 GB.)
 
-**3. Get the DLC (only if you have DLC installed)**
+**3. Optional: English DLC (advanced)**
 
-If `ux0:addcont/PCSG00278/` exists, you have DLC. You must patch it too, or the DLC won't load.
+Skip this if you like: DLC you have installed still works, just in Japanese.
 
-1. In VitaShell, go to `ux0:addcont/`, select the `PCSG00278` folder, press △ and choose **Open decrypted**.
-2. Copy the whole `PCSG00278` folder to your PC (about 53 MB).
+For English DLC, the web patcher needs the DLC files **decrypted**. VitaShell can't decrypt DLC, so you decrypt
+them on the PC. Skip to step 4 if your DLC files are already decrypted.
+
+1. With VitaShell, copy these two folders to your PC:
+   - `ux0:addcont/PCSG00278/` (the DLC)
+   - `ux0:license/addcont/PCSG00278/` (its licenses)
+
+   Have the DLC as a PKG dump (NoPayStation / pkg2zip) instead? Its `addcont/PCSG00278` folder works too, and you
+   don't need the licenses folder.
+2. Get [Python](https://www.python.org/downloads/) and
+   [psvpfsparser](https://github.com/motoharu-gosuto/psvpfstools/releases) (Windows: `psvpfsparser.exe` from the zip).
+   Put psvpfsparser in the `tools` folder of the [release zip](https://github.com/irxd/shin-gundam-musou-en/releases).
+3. In that `tools` folder, run (with your own paths):
+
+   ```
+   python decrypt_dlc.py "C:\path\to\addcont\PCSG00278" "C:\path\to\license\addcont\PCSG00278"
+   ```
+
+   Leave out the second path for a PKG dump. You need an internet connection: psvpfsparser asks an online key
+   service once per DLC. The decrypted DLC goes into a new `PCSG00278_decrypted` folder next to the DLC folder.
 
 **4. Patch the files**
 
 1. Open the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** in Chrome or Edge.
-2. Choose your `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C`. If you have DLC, also choose that `PCSG00278`
-   folder under **DLC folder**.
+2. Choose your `eboot.bin.elf`, `LINKDATA.B` and `LINKDATA.C`. For English DLC, also choose the folder with the
+   decrypted DLC (`PCSG00278_decrypted` from step 3) under **DLC folder**.
 3. Press **Patch**. You get a `rePatch` folder (or a zip with it).
 
 Everything runs in your browser; nothing is uploaded.
@@ -84,7 +102,7 @@ The name under the game's icon stays Japanese unless you do this.
 
 Do steps 1–5 again with your **original, unpatched** files, and replace the old files in `ux0:rePatch/PCSG00278/`.
 Keep your original files somewhere safe for this. If the release notes say only some files changed, you can
-patch just those.
+patch just those. Adding English DLC later? Patch the eboot again together with the DLC folder.
 
 ### Manual patching (Delta Patcher)
 
@@ -97,13 +115,14 @@ Use this only if the web patcher doesn't work for you.
 
    | Your file | Patch | Put the result here |
    |---|---|---|
-   | `eboot.bin.elf` (1.00) | `patches/eboot_v1.00.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
-   | `eboot.bin.elf` (1.02) | `patches/eboot_v1.02.xdelta` | `ux0:rePatch/PCSG00278/eboot.bin` |
+   | `eboot.bin.elf` (1.00) | `patches/eboot_v1.00.xdelta` (with English DLC: `eboot_v1.00_dlc.xdelta`) | `ux0:rePatch/PCSG00278/eboot.bin` |
+   | `eboot.bin.elf` (1.02) | `patches/eboot_v1.02.xdelta` (with English DLC: `eboot_v1.02_dlc.xdelta`) | `ux0:rePatch/PCSG00278/eboot.bin` |
    | `LINKDATA.B` | `patches/LINKDATA.B.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B` |
    | `LINKDATA.C` | `patches/LINKDATA.C.xdelta` | `ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C` |
    | DLC: `<folder>/<file>.BIN` | `patches/DLC/<folder>/<file>.BIN.xdelta` | `ux0:rePatch/PCSG00278/DLC/<folder>/<file>.BIN` |
 
-   Use only the eboot patch for your version. Rename the patched eboot to `eboot.bin`.
+   Use only one eboot patch: the one for your version, and the `_dlc` one only if you also patch the DLC.
+   Rename the patched eboot to `eboot.bin`.
 
 Delta Patcher overwrites the file you patch unless you tick **Backup original file**, so keep a copy of your
 original files. If a patch fails, check the game version and that the file is decrypted (`checksums.txt` in the
@@ -121,7 +140,7 @@ zip lists the expected files).
 4. From the patcher's `rePatch/PCSG00278/` folder, copy:
    - `LINKDATA_NGP/` into `ux0/app/PCSG00278/`, replacing the files there
    - `eboot.bin` into `ux0/app/PCSG00278/` (1.00) or `ux0/patch/PCSG00278/` (1.02)
-   - `DLC/` (if you have DLC) into `ux0/app/PCSG00278/`
+   - `DLC/` (only if you patched the DLC) into `ux0/app/PCSG00278/`
 5. Optional, English name in the game list: back up `ux0/app/PCSG00278/sce_sys/param.sfo`, choose it in the web
    patcher under **Optional: English game name**, put the new `param.sfo` in its place and restart Vita3K.
    With the 1.02 update, do the same for `ux0/patch/PCSG00278/sce_sys/param.sfo`.
@@ -156,7 +175,7 @@ Found another problem? Please [open an issue](https://github.com/irxd/shin-gunda
 | Game name on the home screen | ✅ Optional step (`tools/rename_title.py`) |
 | Lines the PS3 release left blank or "......" (menu help, partner skills, battle messages, music titles…) | ✅ Official English from elsewhere in the game, the rest a new fan translation |
 | Other images with Japanese text (e.g. parts of menu screens) | ➖ Not planned (see [Known issues](#known-issues)) |
-| DLC (17 extra scenarios, 6 extra mobile suit packs) | ✅ Official English where the text matches the base game; the rest is a new fan translation |
+| DLC (17 extra scenarios, 6 extra mobile suit packs) | ✅ Optional (needs decrypted DLC files): official English where the text matches the base game, the rest a new fan translation |
 
 The English comes from the PS3 release, which has no English for some Vita lines: some are left empty and
 some just say "......". These are mostly Vita-only content, such as partner skill descriptions, menu help lines,
@@ -204,7 +223,7 @@ Requirements: Windows, Python 3.10+ with Pillow and keystone-engine, 7-Zip and x
 - FAGDec output `eboot.bin.elf` + `self_auth.bin` → `PCSG00278_100/` (game 1.00) and `PCSG00278_102/`
   (update 1.02; `python -P tools/unfself.py eboot.bin eboot.bin.elf` turns FAGDec's decrypted SELF into the ELF)
 - PS3 `LINKDATA_PS3/LINKDATA.B` and `.C` extracted from the ISO with 7-Zip → `decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/`
-- all 23 DLCs, decrypted (VitaShell *Open decrypted* on `ux0:addcont/PCSG00278/`) →
+- all 23 DLCs, decrypted (psvpfsparser with each DLC's NoNpDrm license) →
   `decrypted/vita/addcont/PCSG00278/<DLC folder>/`
 
 Then:
@@ -287,6 +306,7 @@ tools/build_font.py      font atlas widths + eboot hooks (proportional text, wor
 tools/build_images.py    English textures from the PS3 release (buttons, title cards, logos, notice)
 tools/build_movies.py    English subtitles for the video cutscenes (LINKDATA.C, PS3 English slot -> Vita Japanese slot)
 tools/build_sfo.py       English game name in param.sfo (used by rename_title.py)
+tools/decrypt_dlc.py     players: decrypts the DLC with psvpfsparser + each DLC's license (rif / work.bin)
 tools/rename_title.py    optional: English game name in app.db (real Vita) or param.sfo (Vita3K)
 tools/unfself.py         decrypted SELF (FAGDec) -> ELF
 tools/g1t*.py, dxt.py    G1T texture decoding / DXT5 encoding

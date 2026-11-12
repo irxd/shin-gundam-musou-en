@@ -1,5 +1,5 @@
 // Page code for the web patcher: file picking, status, progress and saving. Logic lives in core.js.
-import { identify, patchFile, PatchError } from './core.js';
+import { identify, patchFile, ebootEntry, PatchError } from './core.js';
 import { makeZip, crc32 } from './zip.js';
 import { titleFileKind, renameSfo, renameAppDb, loadSqlJs, TitleError, EN } from './title.js';
 
@@ -83,7 +83,7 @@ async function addFiles(list) {
     const row = { file, checking: true };
     const guess = /linkdata\.b$/i.test(file.name) ? 'LINKDATA.B' : /linkdata\.c$/i.test(file.name) ? 'LINKDATA.C'
       : !isDlc && /\.(elf|bin)$/i.test(file.name) ? 'eboot' : null;
-    if (guess) { state.slots[guess] = row; render(); }
+    if (guess && !state.slots[guess]?.ok) { state.slots[guess] = row; render(); }   // keep a good file already chosen
     if (isDlc) { state.dlcChecking++; render(); }
     const id = await identify(file, state.manifest);
     if (isDlc) state.dlcChecking--;
@@ -123,7 +123,7 @@ function render() {
   dlcEl.classList.toggle('ok', nDlc > 0);
   dlcEl.disabled = state.busy;
   dlcEl.querySelector('small').textContent = state.dlcChecking ? 'Checking…'
-    : nDlc ? `${nDlc} of ${dlcTotal()} DLC files` : 'Optional, but needed if you have DLC installed';
+    : nDlc ? `${nDlc} of ${dlcTotal()} DLC files` : 'Optional: English DLC (decrypted DLC files)';
   dlcEl.querySelector('.meta').textContent = nDlc
     ? mb(dlcJobs().reduce((n, j) => n + j.file.size, 0)) : 'Choose folder';
   const zip = $('#zip').checked;
@@ -158,7 +158,10 @@ function setBar(f) { $('#bar').hidden = f == null; $('#bar i').style.width = `${
 async function run() {
   hideError();
   const mode = $('#zip').checked ? 'zip' : 'folder';
-  const main = readySlots().map((k) => state.slots[k]);
+  // with DLC files, the eboot that reads the patched DLC; without, the one that keeps the installed DLC working
+  const withDlc = dlcJobs().length > 0;
+  const main = readySlots().map((k) => (k === 'eboot'
+    ? { ...state.slots[k], entry: ebootEntry(state.slots[k].entry, state.manifest, withDlc) } : state.slots[k]));
   const jobs = main.concat(dlcJobs());
   const shown = main.map((j) => 'ux0:' + j.entry.target.path);
   if (dlcJobs().length) shown.push(`ux0:rePatch/PCSG00278/DLC/ (${dlcJobs().length} files)`);

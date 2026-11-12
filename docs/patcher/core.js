@@ -24,7 +24,8 @@ export async function sha1(blob) {
 export async function identify(file, manifest) {
   const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
   const files = manifest.files;
-  const ebootEntries = files.filter((f) => f.gameVersion);
+  const allEboots = files.filter((f) => f.gameVersion);
+  const ebootEntries = allEboots.filter((f) => !f.dlcEboot);   // the DLC variant is picked when patching
 
   if (startsWith(head, SELF))
     return { kind: 'eboot', ok: false, message: 'This eboot.bin is encrypted (or already patched). Decrypt the ' +
@@ -35,7 +36,7 @@ export async function identify(file, manifest) {
     const h = await sha1(file);
     const e = ebootEntries.find((f) => f.source.sha1 === h);
     if (e) return { kind: 'eboot', entry: e, ok: true, message: `Decrypted eboot, game version ${e.gameVersion}.` };
-    if (ebootEntries.some((f) => f.target.sha1 === h))
+    if (allEboots.some((f) => f.target.sha1 === h))
       return { kind: 'eboot', ok: false, message: 'This eboot is already patched. Use the original one.' };
     return { kind: 'eboot', ok: false, message: 'Unknown eboot version (supported: ' +
       ebootEntries.map((f) => f.gameVersion).join(', ') + '). Make sure it is from Shin Gundam Musou PCSG00278 ' +
@@ -70,14 +71,21 @@ export async function identify(file, manifest) {
       return { kind: 'DLC', ok: false, message: 'This DLC file is already patched. Use the original one.' };
   }
   if (/^(DSC|DMS)\d.*\.bin$/i.test(file.name))
-    return { kind: 'DLC', ok: false, message: 'This DLC file does not match the original (still encrypted? Copy ' +
-      'the DLC folders opened with VitaShell\'s "Open decrypted").' };
+    return { kind: 'DLC', ok: false, message: 'This DLC file is still encrypted (or modified). Decrypt the DLC ' +
+      'first with decrypt_dlc.py, see step 3 of the guide.' };
 
   if (/^linkdata\.[bc]$/i.test(file.name))
     return { kind: 'LINKDATA.' + file.name.slice(-1).toUpperCase(), ok: false,
       message: 'This file is still encrypted. Copy it from the game folder opened with VitaShell\'s ' +
         '"Open decrypted" (or from Vita3K).' };
   return { kind: null, ok: false, message: 'Not a file this patcher needs.' };
+}
+
+/** The eboot entry to apply: the DLC variant (reads the patched DLC from rePatch) when DLC files are patched too. */
+export function ebootEntry(entry, manifest, withDlc) {
+  if (!withDlc) return entry;
+  return manifest.files.find((f) => f.dlcEboot && f.gameVersion === entry.gameVersion && f.source.sha1 === entry.source.sha1)
+    ?? entry;
 }
 
 /**

@@ -10,8 +10,8 @@ Needs xdelta3 (tools/bin/xdelta3.exe or on PATH) and these local inputs:
                                                           the .elf from FAGDec's decrypted SELF)
     decrypted/vita/param.sfo.orig, param_102.sfo.orig     original sce_sys/param.sfo of the game / of the update
     decrypted/ps3/PS3_GAME/USRDIR/LINKDATA_PS3/LINKDATA.B, LINKDATA.C   PS3 EU source of the English text/images
-    decrypted/vita/addcont/PCSG00278/D*/*.BIN             decrypted DLC (VitaShell "Open decrypted" on
-                                                          ux0:addcont/PCSG00278), all 23 DLCs
+    decrypted/vita/addcont/PCSG00278/D*/*.BIN             decrypted DLC (psvpfsparser with each DLC's
+                                                          NoNpDrm license), all 23 DLCs
 
 Output: release/shin-gundam-musou-en-<version>/  (+ .zip)
         docs/patcher/patches/  (the same patches + manifest.json, for the web patcher on GitHub Pages)
@@ -75,6 +75,7 @@ def main():
     shutil.copy(GAME['1.00'][1] / 'LINKDATA_NGP/LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C')
     for v, (_, out_v, *_r) in GAME.items():
         shutil.copy(out_v / 'eboot.bin', BUILD.parent / f'eboot_v{v}.bin')
+        shutil.copy(out_v / 'eboot_dlc.bin', BUILD.parent / f'eboot_v{v}_dlc.bin')
     py('build_images.py', PS3 / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C')
     py('build_movies.py', PS3 / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C')
     py('build_text.py', VITA / 'LINKDATA.B', PS3 / 'LINKDATA.B', BUILD / 'LINKDATA_NGP/LINKDATA.B')
@@ -93,17 +94,17 @@ def main():
         (VITA / 'LINKDATA.C', BUILD / 'LINKDATA_NGP/LINKDATA.C', 'LINKDATA.C.xdelta',
          'ux0:rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.C', None),
     ]
-    # DLC: one patch per .BIN (the patched eboot reads every installed DLC from ux0:rePatch/PCSG00278/DLC/)
+    # DLC: one patch per .BIN (the DLC eboot reads every installed DLC from ux0:rePatch/PCSG00278/DLC/)
     dlc = sorted(ADDCONT.glob('D*/*.BIN'))
     assert len(dlc) == 23, f'expected the 23 DLC .BIN files in {ADDCONT}, found {len(dlc)}'
     for src in dlc:
         rel = f'DLC/{src.parent.name}/{src.name}'
         pairs.append((src, BUILD / rel, f'{rel}.xdelta', f'ux0:rePatch/PCSG00278/{rel}', None))
     for v, (fag, out_v, sfo, sfo_out, sfo_dest) in GAME.items():
-        pairs += [(fag / 'eboot.bin.elf', out_v / 'eboot.bin', f'eboot_v{v}.xdelta', 'ux0:rePatch/PCSG00278/eboot.bin',
-                   v)]
-        # (param.sfo / home-screen name: tools/build_sfo.py works, but the LiveArea didn't pick it up on
-        #  hardware, so it is not shipped yet)
+        # two eboots: without patched DLC (installed DLC loads as before, in Japanese) and with it
+        for suffix in ('', '_dlc'):
+            pairs += [(fag / 'eboot.bin.elf', out_v / f'eboot{suffix}.bin', f'eboot_v{v}{suffix}.xdelta',
+                       'ux0:rePatch/PCSG00278/eboot.bin', v)]
     lines, manifest = [], []
     for src, dst, name, dest, game_version in pairs:
         # -S none: no secondary (LZMA) compression and -A: no app header, so the web patcher's small VCDIFF
@@ -116,15 +117,17 @@ def main():
         check.unlink()
         assert ok, f'{name}: applying the patch does not reproduce {dst}'
         lines.append(f'{name:24} source sha1 {sha1(src)}  ->  {dest}  sha1 {sha1(dst)}')
+        # dlc: a DLC .BIN; dlcEboot: the eboot to use when DLC files are patched too
         manifest.append({'patch': name, 'gameVersion': game_version, 'dlc': name.startswith('DLC/'),
+                         'dlcEboot': name.endswith('_dlc.xdelta'),
                          'source': {'name': 'eboot.bin.elf' if game_version else src.name,
                                     'size': src.stat().st_size, 'sha1': sha1(src)},
                          'target': {'path': dest.removeprefix('ux0:'), 'size': dst.stat().st_size,
                                     'sha1': sha1(dst)}})
     (out / 'checksums.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    # optional English game name (README step 5): the script and the module it uses
+    # players' helpers: DLC decryption (README step 3), English game name (step 6, + the module it uses)
     (out / 'tools').mkdir()
-    for name in ('rename_title.py', 'build_sfo.py'):
+    for name in ('decrypt_dlc.py', 'rename_title.py', 'build_sfo.py'):
         shutil.copy(ROOT / 'tools' / name, out / 'tools' / name)
 
     if WEB.exists():

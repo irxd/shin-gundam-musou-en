@@ -520,9 +520,11 @@ def check_sites(elf, d):
 
 def dlc_path(elf):
     """The DLC loaders mount each DLC (the ownership check stays) and then list/open 'addcont0:' + folder name.
-    rePatch's reAddcont did not work for this game on hardware, so read the DLC files from app0:DLC/ instead,
-    i.e. ux0:rePatch/PCSG00278/DLC/<DLC folder>/ (tools/build_dlc.py). Only these loaders use this copy of the
-    string; the device table has its own 'addcont0:'."""
+    rePatch's reAddcont did not work for this game on hardware, so the DLC eboot (eboot_dlc.bin) reads the DLC
+    files from app0:DLC/ instead, i.e. ux0:rePatch/PCSG00278/DLC/<DLC folder>/ (tools/build_dlc.py). Only these
+    loaders use this copy of the string; the device table has its own 'addcont0:'.
+    A check at run time (use the copy only where it exists) does not fit in 1.02's code gap, so there are two
+    eboots: the normal one keeps reading the installed DLC (in Japanese), for players without patched DLC."""
     ctx = b'DSC\0DMS\0%s%s\0\0\0\0addcont0:\0'
     assert elf.count(ctx) == 1, 'DLC path string not found'
     off = elf.find(ctx) + ctx.index(b'addcont0:')
@@ -576,7 +578,7 @@ def main():
     gap = ((ph[0][2] + ph[0][4] + 3) & ~3, SEG1)
     sp = Space(ks, free + [gap])
     code = build_code(ks, sp, d, t_lo, t_hi, t_ascii)
-    patches = tables + rewrites + code + dlc_path(elf)
+    patches = tables + rewrites + code
 
     # LINKDATA.C: copy + overwrite the font entry in place (same size)
     out_c = os.path.join(out_dir, 'LINKDATA_NGP', 'LINKDATA.C')
@@ -586,11 +588,13 @@ def main():
     with open(out_c, 'r+b') as f:
         f.seek(off * ld.align); f.write(new_g1t)
 
-    new_elf = patch_elf(elf, patches)
-    open(os.path.join(out_dir, 'eboot.bin.elf'), 'wb').write(new_elf)
-    # uncompressed: keeps the release xdelta small (only our changes, not the whole recompressed eboot)
-    fself = make_fself(new_elf, authid=authid_from_self_auth(self_auth), compress=False)
-    open(os.path.join(out_dir, 'eboot.bin'), 'wb').write(fself)
+    # two eboots: eboot.bin reads the installed DLC as before, eboot_dlc.bin reads the patched DLC (dlc_path)
+    for name, extra in (('eboot', []), ('eboot_dlc', dlc_path(elf))):
+        new_elf = patch_elf(elf, patches + extra)
+        open(os.path.join(out_dir, name + '.bin.elf'), 'wb').write(new_elf)
+        # uncompressed: keeps the release xdelta small (only our changes, not the whole recompressed eboot)
+        fself = make_fself(new_elf, authid=authid_from_self_auth(self_auth), compress=False)
+        open(os.path.join(out_dir, name + '.bin'), 'wb').write(fself)
 
     # ASCII advance widths for build_text.py's pre-wrapping -> build/ascii_widths.json
     wpath = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'build', 'ascii_widths.json')
