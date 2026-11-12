@@ -1,9 +1,11 @@
 {
-  "version": "0.5.0",
+  "version": "1.0.0",
   "files": [
     {
       "patch": "LINKDATA.B.xdelta",
       "gameVersion": null,
+      "dlc": false,
+      "dlcEboot": false,
       "source": {
         "name": "LINKDATA.B",
         "size": 7995392,
@@ -11,13 +13,15 @@
       },
       "target": {
         "path": "rePatch/PCSG00278/LINKDATA_NGP/LINKDATA.B",
-        "size": 7571456,
-        "sha1": "4d4716d72688989f5294a52072c34d791596dfcd"
+        "size": 7553024,
+        "sha1": "4d98852433816280e8e69ca4bf061e31dfea2a77"
       }
     },
     {
       "patch": "LINKDATA.C.xdelta",
       "gameVersion": null,
+      "dlc": false,
+      "dlcEboot": false,
       "source": {
         "name": "LINKDATA.C",
         "size": 980310016,
@@ -30,8 +34,378 @@
       }
     },
     {
+      "patch": "DLC/DMS0000000000000/DMS000_118_149_999.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DMS000_118_149_999.BIN",
+        "size": 7032416,
+        "sha1": "ac14dfde43feb9fa2b39f5f0de510effa6b2e800"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DMS0000000000000/DMS000_118_149_999.BIN",
+        "size": 7032416,
+        "sha1": "513688b46fdd7e746db94463e279a68eead1c4aa"
+      }
+    },
+    {
+      "patch": "DLC/DMS0000000000001/DMS001_119_150_054.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DMS001_119_150_054.BIN",
+        "size": 8113088,
+        "sha1": "506a7ebdcd3d8e1dbd85d8033730eb77eed59682"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DMS0000000000001/DMS001_119_150_054.BIN",
+        "size": 8113088,
+        "sha1": "8a28e96172ef913c96dd459a14d3e7c870c970d9"
+      }
+    },
+    {
+      "patch": "DLC/DMS0000000000002/DMS002_120_151_107.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DMS002_120_151_107.BIN",
+        "size": 8830640,
+        "sha1": "780893c69e121c118db4b78e37acdff59f4f58bd"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DMS0000000000002/DMS002_120_151_107.BIN",
+        "size": 8830640,
+        "sha1": "dd6d2ceda5e37f7770b070acf028399627b3af4f"
+      }
+    },
+    {
+      "patch": "DLC/DMS0000000000003/DMS003_121_152_193.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DMS003_121_152_193.BIN",
+        "size": 8820256,
+        "sha1": "9b8ee7abce3c47ce74cae7fb53a6601c80e98f79"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DMS0000000000003/DMS003_121_152_193.BIN",
+        "size": 8820256,
+        "sha1": "2f87b5cde8de147c4cce595e20408a47a070d179"
+      }
+    },
+    {
+      "patch": "DLC/DMS0000000000004/DMS004_122_153_999.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DMS004_122_153_999.BIN",
+        "size": 9913584,
+        "sha1": "698bc3dd06d17f06b1ba9e2f3fcf04ca5827bf56"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DMS0000000000004/DMS004_122_153_999.BIN",
+        "size": 9913584,
+        "sha1": "3f8698d1d088d90dd65563a816a71802c31db8cd"
+      }
+    },
+    {
+      "patch": "DLC/DMS0000000000005/DMS005_124_155_999.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DMS005_124_155_999.BIN",
+        "size": 11785216,
+        "sha1": "64290b821bce5dc3a36bfc4994cd1a47210b8ea3"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DMS0000000000005/DMS005_124_155_999.BIN",
+        "size": 11785216,
+        "sha1": "55636414d2566a882b0700732ef706eaafb74b7d"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000000/DSC_000.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_000.BIN",
+        "size": 47892,
+        "sha1": "1307897ce701aad61e107aeb50805f9eb1b4940c"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000000/DSC_000.BIN",
+        "size": 46232,
+        "sha1": "97a6f4e2fdde86ff35f414a2351511b4d0a36b23"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000001/DSC_001.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_001.BIN",
+        "size": 32600,
+        "sha1": "5c0f3744164ac6ef52c3bb056e1abbf660e4d2a8"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000001/DSC_001.BIN",
+        "size": 31332,
+        "sha1": "d54960f4619695252f9b003020c6f1066808f842"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000002/DSC_002.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_002.BIN",
+        "size": 43672,
+        "sha1": "4cc2fe915486f6ee734b523c78ece0ca063155e1"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000002/DSC_002.BIN",
+        "size": 41384,
+        "sha1": "f664ff6ea3269372a36954f29f336878322192bf"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000003/DSC_003.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_003.BIN",
+        "size": 33588,
+        "sha1": "fb0c3112fd191b9c6e6e940c8410d88ca095dcf8"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000003/DSC_003.BIN",
+        "size": 32068,
+        "sha1": "084224ea2d722f39eebafe67118f960e96be49d8"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000004/DSC_004.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_004.BIN",
+        "size": 58648,
+        "sha1": "5897cd1848eca75c1ef89d66304cb600b56f0212"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000004/DSC_004.BIN",
+        "size": 58000,
+        "sha1": "eb75ae8192ca6401efb7435d66043250cf57a0e1"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000005/DSC_005.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_005.BIN",
+        "size": 38932,
+        "sha1": "4f0a4af9c46cb1463bbb4f9aabfc7d4e64c90d16"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000005/DSC_005.BIN",
+        "size": 37544,
+        "sha1": "7154d13f2100c7f9112f0a5497aab11057852196"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000006/DSC_006.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_006.BIN",
+        "size": 64768,
+        "sha1": "f46770b423facd808bf6e8cd9aa53bcce0422347"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000006/DSC_006.BIN",
+        "size": 60616,
+        "sha1": "133f4f6948b7977955ed320966c8bf15954a5c33"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000007/DSC_007.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_007.BIN",
+        "size": 55308,
+        "sha1": "fc871fae81cf13d519764a29353e23ef8249eb4f"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000007/DSC_007.BIN",
+        "size": 52352,
+        "sha1": "aa727225bc2ee7c303d613e476f94d8f4a3bd168"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000008/DSC_008.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_008.BIN",
+        "size": 55660,
+        "sha1": "378b2f31780cfd62bfe38149ce93d2954d4ed4de"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000008/DSC_008.BIN",
+        "size": 54648,
+        "sha1": "30a5552ea229e046cbe4dad084af5f58999951e3"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000009/DSC_009.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_009.BIN",
+        "size": 41488,
+        "sha1": "845b78c7f2370c2c67ee36550dc8b99b99e5f7c5"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000009/DSC_009.BIN",
+        "size": 40140,
+        "sha1": "79e0686a4ab38e69895822817a9f7a8e13074869"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000010/DSC_010.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_010.BIN",
+        "size": 32716,
+        "sha1": "8d35548fdffbcf29fe12d2017c04003891849d54"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000010/DSC_010.BIN",
+        "size": 30760,
+        "sha1": "5c5344787191dbe298fbcf7483b70c99198a659d"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000011/DSC_011.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_011.BIN",
+        "size": 52948,
+        "sha1": "ee3962566ee6efb09b41456b92815d97f656f6b8"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000011/DSC_011.BIN",
+        "size": 50284,
+        "sha1": "1e7b05874c7ecd9f4a7561ee24c70bc4bec2c37c"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000012/DSC_012.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_012.BIN",
+        "size": 61824,
+        "sha1": "79112d55ce8dd474543f63c7638543b5ee28929f"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000012/DSC_012.BIN",
+        "size": 58600,
+        "sha1": "5f1450740c05d856f5039ff0269a26b4f18006ce"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000013/DSC_013.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_013.BIN",
+        "size": 40372,
+        "sha1": "c864a98708189a7a317a6e5dc4b5483e726996a8"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000013/DSC_013.BIN",
+        "size": 38660,
+        "sha1": "f265bdfb43a9c3fa3f5ca0d9dba0ce9e27a55dd1"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000014/DSC_014.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_014.BIN",
+        "size": 48920,
+        "sha1": "b2d6a8eab00a17593a678bde0b4616d12e5b3f50"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000014/DSC_014.BIN",
+        "size": 45996,
+        "sha1": "38b3d46d6519e6b406a24401feabde6ae77671d3"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000015/DSC_015.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_015.BIN",
+        "size": 62388,
+        "sha1": "1cfcf7ef5b295429b3a6892a5a80df3506674024"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000015/DSC_015.BIN",
+        "size": 58668,
+        "sha1": "868790009aa96e0bff6bb4421fb091c52294f97e"
+      }
+    },
+    {
+      "patch": "DLC/DSC0000000000016/DSC_016.BIN.xdelta",
+      "gameVersion": null,
+      "dlc": true,
+      "dlcEboot": false,
+      "source": {
+        "name": "DSC_016.BIN",
+        "size": 35196,
+        "sha1": "e03544918902c00e691ea009fe98e25dd57913c4"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/DLC/DSC0000000000016/DSC_016.BIN",
+        "size": 33916,
+        "sha1": "d1fb3527cefe50737735daa043cdbf61bd8c2931"
+      }
+    },
+    {
       "patch": "eboot_v1.00.xdelta",
       "gameVersion": "1.00",
+      "dlc": false,
+      "dlcEboot": false,
       "source": {
         "name": "eboot.bin.elf",
         "size": 3665274,
@@ -39,13 +413,31 @@
       },
       "target": {
         "path": "rePatch/PCSG00278/eboot.bin",
-        "size": 8634620,
-        "sha1": "ae210ca5aafdcac88fbce886625b78c0086e7a67"
+        "size": 8634780,
+        "sha1": "1278d1b637b52be55d84bc4630c9189763dddc5c"
+      }
+    },
+    {
+      "patch": "eboot_v1.00_dlc.xdelta",
+      "gameVersion": "1.00",
+      "dlc": false,
+      "dlcEboot": true,
+      "source": {
+        "name": "eboot.bin.elf",
+        "size": 3665274,
+        "sha1": "69e7eb06314f1f1297fe15758afadad946dbb7a0"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/eboot.bin",
+        "size": 8634780,
+        "sha1": "262b590dad2840d8b96f534f40a70e7f2721e223"
       }
     },
     {
       "patch": "eboot_v1.02.xdelta",
       "gameVersion": "1.02",
+      "dlc": false,
+      "dlcEboot": false,
       "source": {
         "name": "eboot.bin.elf",
         "size": 3668186,
@@ -53,8 +445,24 @@
       },
       "target": {
         "path": "rePatch/PCSG00278/eboot.bin",
-        "size": 8637532,
-        "sha1": "ffbf4ba5cb41be6dfe68018ce765e56301a0da09"
+        "size": 8637692,
+        "sha1": "f205c1f7d627fab8cfaf7abf8c6b9f326e04d259"
+      }
+    },
+    {
+      "patch": "eboot_v1.02_dlc.xdelta",
+      "gameVersion": "1.02",
+      "dlc": false,
+      "dlcEboot": true,
+      "source": {
+        "name": "eboot.bin.elf",
+        "size": 3668186,
+        "sha1": "a3e44c93e09b713279003ae812c313851128d04f"
+      },
+      "target": {
+        "path": "rePatch/PCSG00278/eboot.bin",
+        "size": 8637692,
+        "sha1": "3da9cdbe009e6226ca67e25c552a994a8300b8ad"
       }
     }
   ]
