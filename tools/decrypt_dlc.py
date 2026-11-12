@@ -1,14 +1,15 @@
 """Decrypt the Shin Gundam Musou DLC with psvpfsparser, so the web patcher can translate it.
 
 Usage:
-    python decrypt_dlc.py <addcont folder> [<license folder>] [-o <output folder>] [--psvpfsparser <exe>]
+    python tools/decrypt_dlc.py <addcont folder> [<license folder>] [-o <output folder>] [--psvpfsparser <exe>]
 
   <addcont folder>   the DLC as copied from the Vita: ux0:addcont/PCSG00278 (one subfolder per DLC),
                      or the addcont/PCSG00278 folder of a PKG dump (NoPayStation / pkg2zip)
   <license folder>   ux0:license/addcont/PCSG00278 (NoNpDrm licenses). Not needed when every DLC folder
                      already has its license inside (a .rif file or sce_sys/package/work.bin, as in PKG dumps)
   -o                 where the decrypted files go (default: PCSG00278_decrypted next to the addcont folder)
-  --psvpfsparser     path to psvpfsparser(.exe) (default: next to this script, or on PATH)
+  --psvpfsparser     path to psvpfsparser(.exe) (default: found in the release folder, its tools folder, a
+                     folder inside either, or on PATH)
 
 psvpfsparser (https://github.com/motoharu-gosuto/psvpfstools/releases) asks the public F00D service
 cma.henkaku.xyz once per DLC, so an internet connection is needed. This script only finds each DLC's
@@ -43,8 +44,12 @@ def find_parser(arg):
         return arg
     here = Path(__file__).resolve().parent
     for name in ('psvpfsparser.exe', 'psvpfsparser'):
-        if (here / name).is_file():
-            return str(here / name)
+        # next to this script, in the release folder above it, or in an unzipped folder in either
+        for d in (here, here.parent):
+            if (d / name).is_file():
+                return str(d / name)
+            if found := sorted(d.glob(f'*/{name}')):
+                return str(found[0])
         if p := shutil.which(name):
             return p
     sys.exit('psvpfsparser not found. Download it from https://github.com/motoharu-gosuto/psvpfstools/releases '

@@ -77,7 +77,8 @@ export async function identify(file, manifest) {
   if (/^linkdata\.[bc]$/i.test(file.name))
     return { kind: 'LINKDATA.' + file.name.slice(-1).toUpperCase(), ok: false,
       message: 'This file is still encrypted. Copy it from the game folder opened with VitaShell\'s ' +
-        '"Open decrypted" (or from Vita3K).' };
+        '"Open decrypted" over FTP, or paste it into another folder in VitaShell first if you use USB ' +
+        '(or take it from Vita3K).' };
   return { kind: null, ok: false, message: 'Not a file this patcher needs.' };
 }
 

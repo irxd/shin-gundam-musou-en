@@ -44,7 +44,10 @@ Playing on Vita3K instead? See [Vita3K](#vita3k).
 **2. Get the game data (with VitaShell)**
 
 1. Go to `ux0:app/PCSG00278/`, press △ and choose **Open decrypted**.
-2. Copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to your PC. (`LINKDATA.C` is about 1 GB.)
+2. Copy `LINKDATA_NGP/LINKDATA.B` and `LINKDATA_NGP/LINKDATA.C` to your PC (`LINKDATA.C` is about 1 GB):
+   - **FTP** (VitaShell: press SELECT): copy them from the folder you opened decrypted.
+   - **USB:** USB mode gives the still-encrypted files. First copy both files in VitaShell (△ → Copy) and paste
+     them into another folder, e.g. `ux0:data/`. Then copy them from that folder over USB.
 
 **3. Optional: English DLC (advanced)**
 
@@ -59,13 +62,13 @@ them on the PC. Skip to step 4 if your DLC files are already decrypted.
 
    Have the DLC as a PKG dump (NoPayStation / pkg2zip) instead? Its `addcont/PCSG00278` folder works too, and you
    don't need the licenses folder.
-2. Get [Python](https://www.python.org/downloads/) and
-   [psvpfsparser](https://github.com/motoharu-gosuto/psvpfstools/releases) (Windows: `psvpfsparser.exe` from the zip).
-   Put psvpfsparser in the `tools` folder of the [release zip](https://github.com/irxd/shin-gundam-musou-en/releases).
-3. In that `tools` folder, run (with your own paths):
+2. Install [Python](https://www.python.org/downloads/). Unzip the
+   [release zip](https://github.com/irxd/shin-gundam-musou-en/releases), then unzip
+   [psvpfsparser](https://github.com/motoharu-gosuto/psvpfstools/releases) into that release folder.
+3. Open a terminal in the release folder and run (with your own paths):
 
    ```
-   python decrypt_dlc.py "C:\path\to\addcont\PCSG00278" "C:\path\to\license\addcont\PCSG00278"
+   python tools\decrypt_dlc.py "C:\path\to\addcont\PCSG00278" "C:\path\to\license\addcont\PCSG00278"
    ```
 
    Leave out the second path for a PKG dump. You need an internet connection: psvpfsparser asks an online key
