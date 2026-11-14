@@ -74,6 +74,11 @@ them on the PC. Skip to step 4 if your DLC files are already decrypted.
    Leave out the second path for a PKG dump. You need an internet connection: psvpfsparser asks an online key
    service once per DLC. The decrypted DLC goes into a new `PCSG00278_decrypted` folder next to the DLC folder.
 
+> **Adding English DLC later?** You **must** re-patch your original `eboot.bin.elf` together with the DLC folder
+> (and copy the new `eboot.bin` too). There are two separate eboot variants (one without DLC and one with DLC);
+> if you only patch the DLC folder and keep your old `eboot.bin`, the game will ignore the patched DLC (see
+> [Known issues](#known-issues) for why).
+
 **4. Patch the files**
 
 1. Open the **[web patcher](https://irxd.github.io/shin-gundam-musou-en/)** in Chrome or Edge.
@@ -105,7 +110,7 @@ The name under the game's icon stays Japanese unless you do this.
 
 Do steps 1–5 again with your **original, unpatched** files, and replace the old files in `ux0:rePatch/PCSG00278/`.
 Keep your original files somewhere safe for this. If the release notes say only some files changed, you can
-patch just those. Adding English DLC later? Patch the eboot again together with the DLC folder.
+patch just those.
 
 ### Manual patching (Delta Patcher)
 
@@ -158,6 +163,18 @@ Only if you want to go back to the Japanese game. You don't need this to install
 
 ## Known issues
 
+- **DLC not working or still in Japanese after patching:** Make sure your `eboot.bin` matches whether you use
+  the patched `DLC/` folder. There are **two eboot variants** per game version (`without DLC` and `_dlc` `with DLC`):
+  - **Why:** `rePatch`'s `reAddcont` folder did not work for this game on PS Vita hardware, so as a workaround
+    the patched DLC is placed inside `ux0:rePatch/PCSG00278/DLC/` instead (`ux0/app/PCSG00278/DLC/` on Vita3K),
+    and the `_dlc` eboot redirects DLC file reads from `addcont0:` to `app0:DLC/`.
+  - **If you patched without DLC first and added DLC later:** Simply patching the DLC folder is not enough —
+    you are still using the non-DLC `eboot.bin`, which reads from `addcont0:` and ignores `rePatch/PCSG00278/DLC/`.
+    Re-patch your **original** `eboot.bin.elf` together with the DLC folder in the web patcher (or apply
+    `eboot_v1.00_dlc.xdelta` / `eboot_v1.02_dlc.xdelta` manually) and replace `eboot.bin`.
+  - **If you use the `_dlc` eboot without patched DLC files (or install new DLC later):** Because the `_dlc` eboot
+    reads all DLC from `app0:DLC/`, any installed DLC missing from `ux0:rePatch/PCSG00278/DLC/` will not load.
+    Include all installed DLCs when patching, or switch back to the non-DLC `eboot.bin` if you don't use patched DLC.
 - Some images still have Japanese text, such as parts of menu screens and one tutorial picture (the network
   menu, which is Japanese on PS3 too). These stay as they are.
 - English is longer than Japanese, so long lines in story and battle text boxes are drawn in a smaller font to
