@@ -164,15 +164,15 @@ Only if you want to go back to the Japanese game. You don't need this to install
 ## Known issues
 
 - **DLC not working or still in Japanese after patching:** Make sure your `eboot.bin` matches whether you use
-  the patched `DLC/` folder. There are **two eboot variants** per game version (`without DLC` and `_dlc` `with DLC`):
+  the patched `DLC/` folder. There are **two eboot variants** per game version (`without DLC` and `with DLC`):
   - **Why:** `rePatch`'s `reAddcont` folder did not work for this game on PS Vita hardware, so as a workaround
     the patched DLC is placed inside `ux0:rePatch/PCSG00278/DLC/` instead (`ux0/app/PCSG00278/DLC/` on Vita3K),
-    and the `_dlc` eboot redirects DLC file reads from `addcont0:` to `app0:DLC/`.
+    and the patched eboot with DLC redirects DLC file reads from `addcont0:` to `app0:DLC/`.
   - **If you patched without DLC first and added DLC later:** Simply patching the DLC folder is not enough —
     you are still using the non-DLC `eboot.bin`, which reads from `addcont0:` and ignores `rePatch/PCSG00278/DLC/`.
     Re-patch your **original** `eboot.bin.elf` together with the DLC folder in the web patcher (or apply
     `eboot_v1.00_dlc.xdelta` / `eboot_v1.02_dlc.xdelta` manually) and replace `eboot.bin`.
-  - **If you use the `_dlc` eboot without patched DLC files (or install new DLC later):** Because the `_dlc` eboot
+  - **If you use the eboot with DLC without patched DLC files (or install new DLC later):** Because the eboot with DLC
     reads all DLC from `app0:DLC/`, any installed DLC missing from `ux0:rePatch/PCSG00278/DLC/` will not load.
     Include all installed DLCs when patching, or switch back to the non-DLC `eboot.bin` if you don't use patched DLC.
 - Some images still have Japanese text, such as parts of menu screens and one tutorial picture (the network

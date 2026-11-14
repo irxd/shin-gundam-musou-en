@@ -129,7 +129,8 @@ function render() {
   const zip = $('#zip').checked;
   const picked = readySlots();
   const checking = SLOTS.some((k) => state.slots[k]?.checking) || state.dlcChecking > 0;
-  const ready = picked.length + nDlc > 0 && !checking;
+  const needsEboot = nDlc > 0 && !state.slots.eboot?.ok;
+  const ready = picked.length + nDlc > 0 && !checking && !needsEboot;
   const partial = picked.length + nDlc > 0 && picked.length < SLOTS.length;
   const outSize = picked.reduce((n, k) => n + state.slots[k].entry.target.size, 0)
     + dlcJobs().reduce((n, j) => n + j.entry.target.size, 0);
@@ -139,6 +140,7 @@ function render() {
   $('#zip').disabled = state.busy || !canPickFolder;
   $('#unzip-hint').hidden = !zip;
   $('#partial').hidden = !partial;
+  $('#dlc-eboot-note').hidden = !needsEboot;
   const names = picked.map((k) => NAMES[k]).concat(nDlc ? [`${nDlc} DLC file${nDlc > 1 ? 's' : ''}`] : []);
   $('#partial-names').textContent = partial ? listNames(names) + '.' : '';
 
@@ -147,6 +149,7 @@ function render() {
     const where = zip ? 'Creates a zip with the rePatch folder' : 'You\'ll pick where to save it';
     if (checking) setStatus('Checking files…', 'One moment');
     else if (!picked.length && !nDlc) setStatus('Choose your files', 'All three (+ DLC), or only the ones to update');
+    else if (needsEboot) setStatus('Include eboot.bin.elf', 'Required when patching DLC');
     else if (partial) setStatus(`Ready to patch ${picked.length} of 3 files${nDlc ? ` + ${nDlc} DLC` : ''}`, where);
     else setStatus(nDlc ? `Ready to patch 3 files + ${nDlc} DLC` : 'Ready to patch', where);
   }

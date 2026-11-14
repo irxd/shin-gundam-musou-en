@@ -140,6 +140,8 @@
   <section class="card" id="partial" hidden>
     <div class="msg">
       <p style="color:var(--text)">Patching only <span id="partial-names"></span></p>
+      <p id="dlc-eboot-note" hidden><strong style="color:var(--text);font-weight:500">Only want to patch the DLC?</strong>
+        You also need to include your original <code>eboot.bin.elf</code> — the non-DLC eboot ignores the patched DLC folder.</p>
       <p>Use this to update files you already patched, for example when a new version changes only one file.
         The other patched files on your Vita must be from a version that works with this one: the
         <a href="https://github.com/irxd/shin-gundam-musou-en/releases" target="_blank" rel="noopener" style="text-decoration:underline">release notes</a>
