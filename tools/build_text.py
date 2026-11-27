@@ -63,13 +63,14 @@ def fill(ja, en):
 TABLE_SENTENCE = 12.0    # table records at least this wide (in Japanese) are sentences -> may be wrapped
 
 
-def english(tp, tv, st, box=None, table=False, measured=False):
+def english(tp, tv, st, box=None, table=False, measured=False, widen=True):
     """Final English bytes for one string: font fixups + pre-wrap for boxes that need it.
     tp: PS3 English bytes, tv: Vita Japanese bytes it replaces, box: (width limit, max lines) or None.
     table: record of a table entry (menus + help texts). Only sentences are wrapped there (short
     labels must stay on one line), and never narrower than the Japanese line it replaces, unless the
     box was measured on hardware (measured: the game wraps the Japanese itself, its lines say nothing;
-    the paragraph breaks are kept, the text is shrunk instead of reflowed)."""
+    the paragraph breaks are kept, the text is shrunk instead of reflowed). widen=False: the box
+    estimate holds even where the Japanese line is wider (see TABLE_NO_WIDEN)."""
     try:
         s = fixup(tp.decode('utf-8'))
     except UnicodeDecodeError:      # binary data that happens to look like a string table
@@ -88,9 +89,9 @@ def english(tp, tv, st, box=None, table=False, measured=False):
         if table:
             if '\n' not in ja and METRICS.width(ja, 5.0) < TABLE_SENTENCE:
                 return s.encode('utf-8')
-            if not measured:
+            if not measured and widen:
                 lim = max(lim, METRICS.line_width(ja, 5.0))
-        if measured or box is PANEL or '\n' in ja or METRICS.width(ja, 5.0) <= lim:  # shown in that box
+        if measured or not widen or box is PANEL or '\n' in ja or METRICS.width(ja, 5.0) <= lim:  # shown in that box
             # measured boxes: a button icon ([BTN][NAME]) is drawn about one glyph wide; stand-in chars
             # (unknown to the metrics = 1.0 unit) while wrapping
             icons = BTN.findall(s) if measured else []
@@ -313,6 +314,13 @@ TABLE_MEASURED = {
     26: (22.5, 3, True, False),
 }
 
+# Tables whose box estimate holds for every record: a one-line Japanese record wider than the box is
+# wrapped by the game itself, so the English must not be pre-wrapped at that wider width (it was broken
+# again by the game, leaving a stray word on its own line).
+TABLE_NO_WIDEN = {
+    13,     # skill descriptions (Skills screen): game breaks at ~21-22 units, estimate 20
+}
+
 # Tables the game wraps by itself whose PS3 text has hand line breaks made for the PS3 font: where the
 # Japanese has none, they are dropped (the Vita breaks elsewhere, which left short lines).
 TABLE_JOIN = {10}       # character descriptions (Database > Characters)
@@ -404,7 +412,7 @@ def port_table(dv, dp, st):
                 b = None                    # the game wraps these
                 if b'\n' not in rv:
                     rp = re.sub(rb' *\n *', b' ', rp)
-            e = english(rp, rv, st, b, table=True, measured=bool(measured))
+            e = english(rp, rv, st, b, table=True, measured=bool(measured), widen=tv[0] not in TABLE_NO_WIDEN)
             if k in pad and METRICS:
                 e = pad_icon_prefix(e, st)
             recs.append(e); n += 1
